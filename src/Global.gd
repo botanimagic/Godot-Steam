@@ -11,6 +11,8 @@ var is_owned: bool = false
 var steam_id: int = 0
 var steam_username: String = "[not set]"
 
+var lobby_id : int = 0
+var lobby_members : Array = []
 
 func _ready() -> void:
 	print("Starting the GodotSteam example project...")

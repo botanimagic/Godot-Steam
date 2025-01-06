@@ -50,8 +50,20 @@ func _ready() -> void:
 # 
 func create_lobby():
 	# Check no ther lobby is running
-	if Global.LOBBY_ID == 0:
+	if Global.lobby_id == 0:
 		Steam.createLobby(lobby_status.Public, 4) 
+
+#
+func join_lobby(lobby_id):
+	lobby_popup.hide()
+	var name = Steam.getLobbyData(lobby_id, "name")
+	display_message("Joining lobby: " + str(name) + "....")
+
+	# Clear previous lobby members lists
+	Global.lobby_members.clear()
+
+	# Steam join request
+	Steam.joinLobby(lobby_id)
 
 #
 func display_message(message):
@@ -63,7 +75,7 @@ func display_message(message):
 func _on_lobby_created(connect, lobby_id):
 	if connect == 1:
 		# Set lobby Id
-		Global.LOBBY_ID = lobby_id
+		Global.lobby_id = lobby_id
 		display_message("Created lobby: " + lobby_set_name.text)
 		
 		# Set Lobby Data
