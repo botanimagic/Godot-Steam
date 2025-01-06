@@ -6,59 +6,59 @@
 script = ExtResource("1_tta3j")
 
 [node name="CreateLobby" type="Button" parent="."]
-offset_left = 26.0
-offset_top = 30.0
-offset_right = 265.0
-offset_bottom = 78.0
+offset_left = 147.0
+offset_top = 94.0
+offset_right = 652.0
+offset_bottom = 227.0
 text = "Create Lobby"
-
-[node name="LobbySetName" type="TextEdit" parent="CreateLobby"]
-layout_mode = 0
-offset_left = 276.0
-offset_top = 20.0
-offset_right = 481.0
-offset_bottom = 48.0
 
 [node name="label" type="Label" parent="CreateLobby"]
 layout_mode = 0
-offset_left = 275.0
-offset_top = -6.0
-offset_right = 482.0
-offset_bottom = 17.0
+offset_left = 546.0
+offset_top = 53.0
+offset_right = 758.0
+offset_bottom = 81.0
 text = "Lobby Name"
 
+[node name="LobbySetName" type="TextEdit" parent="CreateLobby"]
+layout_mode = 0
+offset_left = 544.0
+offset_top = 79.0
+offset_right = 763.0
+offset_bottom = 131.0
+
 [node name="JoinLobby" type="Button" parent="."]
-offset_left = 30.0
-offset_top = 98.0
-offset_right = 269.0
-offset_bottom = 146.0
+offset_left = 151.0
+offset_top = 238.0
+offset_right = 644.0
+offset_bottom = 320.0
 text = "Join Lobby"
 
 [node name="StartGame" type="Button" parent="."]
-offset_left = 1097.0
-offset_top = 104.0
-offset_right = 1243.0
-offset_bottom = 152.0
+offset_left = 1505.0
+offset_top = 226.0
+offset_right = 1749.0
+offset_bottom = 314.0
 text = "Start Game"
 
 [node name="SteamName" type="Label" parent="."]
-offset_left = 1059.0
-offset_top = 44.0
-offset_right = 1238.0
-offset_bottom = 69.0
+offset_left = 1567.0
+offset_top = 160.0
+offset_right = 1746.0
+offset_bottom = 185.0
 text = "SteamName"
 horizontal_alignment = 2
 vertical_alignment = 1
 
 [node name="Players" type="Panel" parent="."]
-offset_left = 29.0
-offset_top = 162.0
-offset_right = 269.0
-offset_bottom = 623.0
+offset_left = 156.0
+offset_top = 336.0
+offset_right = 649.0
+offset_bottom = 795.0
 
 [node name="PlayerCount" type="Label" parent="Players"]
 layout_mode = 0
-offset_right = 241.0
+offset_right = 493.0
 offset_bottom = 42.0
 text = "Players (0)"
 horizontal_alignment = 1
@@ -67,14 +67,14 @@ vertical_alignment = 1
 [node name="PlayerList" type="RichTextLabel" parent="Players"]
 layout_mode = 0
 offset_top = 61.0
-offset_right = 242.0
+offset_right = 491.0
 offset_bottom = 458.0
 
 [node name="Chat" type="Panel" parent="."]
-offset_left = 310.0
-offset_top = 165.0
-offset_right = 1244.0
-offset_bottom = 624.0
+offset_left = 678.0
+offset_top = 337.0
+offset_right = 1756.0
+offset_bottom = 796.0
 
 [node name="LobbyGetName" type="Label" parent="Chat"]
 layout_mode = 0
@@ -88,29 +88,29 @@ text = "Lobby Name"
 layout_mode = 0
 offset_left = 18.0
 offset_top = 43.0
-offset_right = 913.0
+offset_right = 1069.0
 offset_bottom = 440.0
 
 [node name="LeaveLobby" type="Button" parent="."]
-offset_left = 31.0
-offset_top = 639.0
-offset_right = 270.0
-offset_bottom = 687.0
+offset_left = 163.0
+offset_top = 811.0
+offset_right = 647.0
+offset_bottom = 888.0
 text = "Leave Lobby"
 
 [node name="SendMessage" type="Button" parent="."]
-offset_left = 312.0
-offset_top = 646.0
-offset_right = 484.0
-offset_bottom = 684.0
+offset_left = 691.0
+offset_top = 842.0
+offset_right = 860.0
+offset_bottom = 892.0
 text = "Send Message"
 
 [node name="ChatInput" type="TextEdit" parent="SendMessage"]
 layout_mode = 0
-offset_left = 192.0
-offset_top = -1.0
-offset_right = 634.0
-offset_bottom = 37.0
+offset_left = 188.0
+offset_top = 11.0
+offset_right = 725.0
+offset_bottom = 49.0
 
 [node name="Popup" type="Popup" parent="."]
 title = "Lobby List"
