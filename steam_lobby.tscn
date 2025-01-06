@@ -1,0 +1,164 @@
+[gd_scene load_steps=2 format=3 uid="uid://banhawbidmyuo"]
+
+[ext_resource type="Script" path="res://steam_lobby.gd" id="1_tta3j"]
+
+[node name="SteamLobby" type="Node2D"]
+script = ExtResource("1_tta3j")
+
+[node name="CreateLobby" type="Button" parent="."]
+offset_left = 26.0
+offset_top = 30.0
+offset_right = 265.0
+offset_bottom = 78.0
+text = "Create Lobby"
+
+[node name="LobbySetName" type="TextEdit" parent="CreateLobby"]
+layout_mode = 0
+offset_left = 276.0
+offset_top = 20.0
+offset_right = 481.0
+offset_bottom = 48.0
+
+[node name="label" type="Label" parent="CreateLobby"]
+layout_mode = 0
+offset_left = 275.0
+offset_top = -6.0
+offset_right = 482.0
+offset_bottom = 17.0
+text = "Lobby Name"
+
+[node name="JoinLobby" type="Button" parent="."]
+offset_left = 30.0
+offset_top = 98.0
+offset_right = 269.0
+offset_bottom = 146.0
+text = "Join Lobby"
+
+[node name="StartGame" type="Button" parent="."]
+offset_left = 1097.0
+offset_top = 104.0
+offset_right = 1243.0
+offset_bottom = 152.0
+text = "Start Game"
+
+[node name="SteamName" type="Label" parent="."]
+offset_left = 1059.0
+offset_top = 44.0
+offset_right = 1238.0
+offset_bottom = 69.0
+text = "SteamName"
+horizontal_alignment = 2
+vertical_alignment = 1
+
+[node name="Players" type="Panel" parent="."]
+offset_left = 29.0
+offset_top = 162.0
+offset_right = 269.0
+offset_bottom = 623.0
+
+[node name="PlayerCount" type="Label" parent="Players"]
+layout_mode = 0
+offset_right = 241.0
+offset_bottom = 42.0
+text = "Players (0)"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="PlayerList" type="RichTextLabel" parent="Players"]
+layout_mode = 0
+offset_top = 61.0
+offset_right = 242.0
+offset_bottom = 458.0
+
+[node name="Chat" type="Panel" parent="."]
+offset_left = 310.0
+offset_top = 165.0
+offset_right = 1244.0
+offset_bottom = 624.0
+
+[node name="LobbyGetName" type="Label" parent="Chat"]
+layout_mode = 0
+offset_left = 26.0
+offset_top = 11.0
+offset_right = 124.0
+offset_bottom = 34.0
+text = "Lobby Name"
+
+[node name="LobbyOutput" type="RichTextLabel" parent="Chat"]
+layout_mode = 0
+offset_left = 18.0
+offset_top = 43.0
+offset_right = 913.0
+offset_bottom = 440.0
+
+[node name="LeaveLobby" type="Button" parent="."]
+offset_left = 31.0
+offset_top = 639.0
+offset_right = 270.0
+offset_bottom = 687.0
+text = "Leave Lobby"
+
+[node name="SendMessage" type="Button" parent="."]
+offset_left = 312.0
+offset_top = 646.0
+offset_right = 484.0
+offset_bottom = 684.0
+text = "Send Message"
+
+[node name="ChatInput" type="TextEdit" parent="SendMessage"]
+layout_mode = 0
+offset_left = 192.0
+offset_top = -1.0
+offset_right = 634.0
+offset_bottom = 37.0
+
+[node name="Popup" type="Popup" parent="."]
+title = "Lobby List"
+initial_position = 1
+size = Vector2i(500, 500)
+
+[node name="Control" type="Control" parent="Popup"]
+layout_mode = 3
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -249.5
+offset_top = -250.5
+offset_right = 249.5
+offset_bottom = 250.5
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Panel" type="Panel" parent="Popup/Control"]
+custom_minimum_size = Vector2(500, 500)
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="Label" type="Label" parent="Popup/Control/Panel"]
+layout_mode = 0
+offset_left = 12.0
+offset_top = 12.0
+offset_right = 91.0
+offset_bottom = 35.0
+text = "Lobby List"
+
+[node name="CloseList" type="Button" parent="Popup/Control/Panel"]
+layout_mode = 0
+offset_left = 358.0
+offset_top = 453.0
+offset_right = 490.0
+offset_bottom = 484.0
+text = "Close Lobby List"
+
+[node name="Scroll" type="ScrollContainer" parent="Popup/Control/Panel"]
+layout_mode = 0
+offset_left = 6.0
+offset_top = 54.0
+offset_right = 493.0
+offset_bottom = 435.0
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Popup/Control/Panel/Scroll"]
+layout_mode = 2
