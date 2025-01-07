@@ -1,0 +1,109 @@
+[gd_scene load_steps=4 format=3 uid="uid://jnkni1hbhbt1"]
+
+[ext_resource type="PackedScene" uid="uid://1g246ii0mjyv" path="res://scene/steam_status.tscn" id="1_i41qp"]
+[ext_resource type="Script" path="res://scene/authentication.gd" id="1_kabsn"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_e03wk"]
+bg_color = Color(0.121569, 0.121569, 0.121569, 1)
+
+[node name="Authentication" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_kabsn")
+
+[node name="Panel" type="Panel" parent="."]
+layout_mode = 0
+offset_right = 1919.0
+offset_bottom = 1073.0
+
+[node name="Frame" type="HBoxContainer" parent="Panel"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -931.5
+offset_top = -505.5
+offset_right = 926.5
+offset_bottom = 505.5
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 50
+
+[node name="Main" type="VBoxContainer" parent="Panel/Frame"]
+custom_minimum_size = Vector2(1300, 0)
+layout_mode = 2
+theme_override_constants/separation = 50
+
+[node name="Title" type="Label" parent="Panel/Frame/Main"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 60
+text = "AUTHENTICATION"
+
+[node name="Output" type="Label" parent="Panel/Frame/Main"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 40
+text = "Output :"
+
+[node name="output" type="RichTextLabel" parent="Panel/Frame/Main"]
+custom_minimum_size = Vector2(0, 750)
+layout_mode = 2
+theme_override_styles/normal = SubResource("StyleBoxFlat_e03wk")
+scroll_following = true
+
+[node name="SideBar" type="VBoxContainer" parent="Panel/Frame"]
+custom_minimum_size = Vector2(450, 0)
+layout_mode = 2
+theme_override_constants/separation = 50
+
+[node name="SteamStatus" parent="Panel/Frame/SideBar" instance=ExtResource("1_i41qp")]
+layout_mode = 2
+
+[node name="List" type="VBoxContainer" parent="Panel/Frame/SideBar"]
+custom_minimum_size = Vector2(400, 0)
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="TitleSideBar" type="Label" parent="Panel/Frame/SideBar/List"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 30
+text = "Authentication Options"
+
+[node name="GetAuthTicket" type="Button" parent="Panel/Frame/SideBar/List"]
+custom_minimum_size = Vector2(0, 50)
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+text = "Get Auth Ticket"
+
+[node name="BeginAuthSession" type="Button" parent="Panel/Frame/SideBar/List"]
+custom_minimum_size = Vector2(0, 50)
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+text = "Begin Auth Session"
+
+[node name="CancelAuthTicket" type="Button" parent="Panel/Frame/SideBar/List"]
+custom_minimum_size = Vector2(0, 50)
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+text = "Cancel Auth Ticket"
+
+[node name="EndAuthSession" type="Button" parent="Panel/Frame/SideBar/List"]
+custom_minimum_size = Vector2(0, 50)
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+text = "End Auth Session"
+
+[node name="Label" type="Label" parent="Panel/Frame/SideBar/List"]
+custom_minimum_size = Vector2(0, 50)
+layout_mode = 2
+
+[node name="Back" type="Button" parent="Panel/Frame/SideBar/List"]
+custom_minimum_size = Vector2(0, 50)
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+text = "Back To Main Menu"

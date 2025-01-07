@@ -1,0 +1,47 @@
+[gd_scene load_steps=3 format=3 uid="uid://vvf5wyumtl5b"]
+
+[ext_resource type="Script" path="res://scene/lobby_member.gd" id="1_4kqym"]
+[ext_resource type="Texture2D" uid="uid://bq3ru7v2ckj5s" path="res://icon.svg" id="1_bam4d"]
+
+[node name="LobbyMember" type="Control" node_paths=PackedStringArray("username_label", "avatar_rect", "button_kick")]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_4kqym")
+username_label = NodePath("Member/Stuff/Username")
+avatar_rect = NodePath("Member/Avatar")
+button_kick = NodePath("Member/Stuff/Controls/Kick")
+
+[node name="Member" type="HBoxContainer" parent="."]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="Avatar" type="TextureRect" parent="Member"]
+layout_mode = 2
+texture = ExtResource("1_bam4d")
+
+[node name="Stuff" type="VBoxContainer" parent="Member"]
+layout_mode = 2
+
+[node name="Username" type="Label" parent="Member/Stuff"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 30
+text = "Username"
+
+[node name="Controls" type="HBoxContainer" parent="Member/Stuff"]
+layout_mode = 2
+
+[node name="Kick" type="Button" parent="Member/Stuff/Controls"]
+custom_minimum_size = Vector2(60, 0)
+layout_mode = 2
+disabled = true
+text = "Kick"
+
+[node name="View" type="Button" parent="Member/Stuff/Controls"]
+custom_minimum_size = Vector2(60, 0)
+layout_mode = 2
+text = "View"

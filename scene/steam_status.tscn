@@ -1,0 +1,38 @@
+[gd_scene load_steps=2 format=3 uid="uid://1g246ii0mjyv"]
+
+[ext_resource type="Script" path="res://scene/steam_status.gd" id="1_4mdu7"]
+
+[node name="SteamStatus" type="Panel"]
+custom_minimum_size = Vector2(450, 180)
+offset_right = 40.0
+offset_bottom = 40.0
+script = ExtResource("1_4mdu7")
+
+[node name="Status" type="VBoxContainer" parent="."]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 40.0
+theme_override_constants/separation = 10
+
+[node name="Title" type="Label" parent="Status"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+text = "STEAM"
+
+[node name="Title2" type="Label" parent="Status"]
+layout_mode = 2
+
+[node name="ID" type="Label" parent="Status"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+text = "STEAM ID: "
+
+[node name="Username" type="Label" parent="Status"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+text = "STEAM Name"
+
+[node name="Owns" type="Label" parent="Status"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+text = "Owns App:"

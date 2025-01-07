@@ -1,0 +1,234 @@
+[gd_scene load_steps=10 format=3 uid="uid://k30fjse2ok6l"]
+
+[ext_resource type="Script" path="res://scene/lobby.gd" id="1_0m4ko"]
+[ext_resource type="PackedScene" uid="uid://1g246ii0mjyv" path="res://scene/steam_status.tscn" id="1_dr1un"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_ajh6c"]
+bg_color = Color(0.0807833, 0.0807834, 0.0807833, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_fbdgl"]
+content_margin_left = 10.0
+content_margin_top = 10.0
+content_margin_right = 10.0
+content_margin_bottom = 10.0
+bg_color = Color(0.0901961, 0.0901961, 0.0901961, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_rl0kq"]
+content_margin_left = 10.0
+content_margin_top = 10.0
+content_margin_right = 10.0
+content_margin_bottom = 10.0
+bg_color = Color(0.0901961, 0.0901961, 0.0901961, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_q1lhi"]
+content_margin_left = 10.0
+content_margin_top = 15.0
+content_margin_right = 10.0
+content_margin_bottom = 15.0
+bg_color = Color(0.0901961, 0.0901961, 0.0901961, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_upbeu"]
+bg_color = Color(0.0901961, 0.0901961, 0.0901961, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_a85vr"]
+bg_color = Color(0.227451, 0.227451, 0.227451, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_wibkk"]
+bg_color = Color(0.226707, 0.226708, 0.226707, 1)
+
+[node name="Lobby" type="Panel"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_0m4ko")
+
+[node name="Frame" type="HBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -931.5
+offset_top = -505.5
+offset_right = 926.5
+offset_bottom = 505.5
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 50
+
+[node name="Main" type="VBoxContainer" parent="Frame"]
+custom_minimum_size = Vector2(1300, 0)
+layout_mode = 2
+theme_override_constants/separation = 50
+
+[node name="Title" type="Label" parent="Frame/Main"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 60
+text = "Lobby"
+
+[node name="Displays" type="HBoxContainer" parent="Frame/Main"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 50
+
+[node name="Outputs" type="VBoxContainer" parent="Frame/Main/Displays"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Titles" type="HBoxContainer" parent="Frame/Main/Displays/Outputs"]
+layout_mode = 2
+
+[node name="Output Title" type="Label" parent="Frame/Main/Displays/Outputs/Titles"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 30
+text = "Output Display"
+
+[node name="LobbyID" type="Label" parent="Frame/Main/Displays/Outputs/Titles"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 30
+text = "Lobby ID: 0"
+
+[node name="Output" type="RichTextLabel" parent="Frame/Main/Displays/Outputs"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_styles/normal = SubResource("StyleBoxFlat_ajh6c")
+scroll_following = true
+
+[node name="PlayerLists" type="VBoxContainer" parent="Frame/Main/Displays"]
+custom_minimum_size = Vector2(300, 0)
+layout_mode = 2
+
+[node name="Title" type="Label" parent="Frame/Main/Displays/PlayerLists"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 30
+text = "Player List (0)"
+
+[node name="Players" type="VBoxContainer" parent="Frame/Main/Displays/PlayerLists"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="Chat" type="Label" parent="Frame/Main"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 30
+text = "Chat :"
+
+[node name="Messaging" type="HBoxContainer" parent="Frame/Main"]
+layout_mode = 2
+theme_override_constants/separation = 25
+
+[node name="Chat" type="LineEdit" parent="Frame/Main/Messaging"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 30
+theme_override_styles/focus = SubResource("StyleBoxFlat_fbdgl")
+theme_override_styles/read_only = SubResource("StyleBoxFlat_rl0kq")
+theme_override_styles/normal = SubResource("StyleBoxFlat_q1lhi")
+placeholder_text = "Enter a Chat Message..."
+editable = false
+caret_blink = true
+caret_blink_interval = 0.5
+
+[node name="Send" type="Button" parent="Frame/Main/Messaging"]
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+disabled = true
+text = "Send Message"
+
+[node name="SideBar" type="VBoxContainer" parent="Frame"]
+custom_minimum_size = Vector2(450, 0)
+layout_mode = 2
+theme_override_constants/separation = 50
+
+[node name="SteamStatus" parent="Frame/SideBar" instance=ExtResource("1_dr1un")]
+layout_mode = 2
+
+[node name="List" type="VBoxContainer" parent="Frame/SideBar"]
+custom_minimum_size = Vector2(400, 0)
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="TitleSideBar" type="Label" parent="Frame/SideBar/List"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 30
+text = "Lobby Functions"
+
+[node name="CreateLobby" type="Button" parent="Frame/SideBar/List"]
+custom_minimum_size = Vector2(0, 50)
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+text = "Create Lobby"
+
+[node name="OpenLobbyList" type="Button" parent="Frame/SideBar/List"]
+custom_minimum_size = Vector2(0, 50)
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+text = "Open Lobby List"
+
+[node name="GetLobbyData" type="Button" parent="Frame/SideBar/List"]
+custom_minimum_size = Vector2(0, 50)
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+disabled = true
+text = "Get Lobby Data"
+
+[node name="Leave" type="Button" parent="Frame/SideBar/List"]
+custom_minimum_size = Vector2(0, 50)
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+disabled = true
+text = "Leave Lobby"
+
+[node name="Label" type="Label" parent="Frame/SideBar/List"]
+custom_minimum_size = Vector2(0, 50)
+layout_mode = 2
+
+[node name="Lobbies" type="Panel" parent="."]
+visible = false
+layout_mode = 0
+offset_left = 70.0
+offset_top = 170.0
+offset_right = 950.0
+offset_bottom = 683.0
+theme_override_styles/panel = SubResource("StyleBoxFlat_upbeu")
+
+[node name="Title" type="Label" parent="Lobbies"]
+layout_mode = 0
+offset_left = 12.0
+offset_top = 8.0
+offset_right = 91.0
+offset_bottom = 31.0
+text = "Lobby List"
+
+[node name="ScrollContainer" type="ScrollContainer" parent="Lobbies"]
+layout_mode = 0
+offset_left = 15.0
+offset_top = 37.0
+offset_right = 864.0
+offset_bottom = 440.0
+
+[node name="List" type="VBoxContainer" parent="Lobbies/ScrollContainer"]
+layout_mode = 2
+
+[node name="CloseLobbies" type="Button" parent="Lobbies"]
+layout_mode = 0
+offset_left = 647.0
+offset_top = 461.0
+offset_right = 845.0
+offset_bottom = 495.0
+theme_override_styles/normal = SubResource("StyleBoxFlat_a85vr")
+text = "Close Lobby List"
+
+[node name="Refresh" type="Button" parent="Lobbies"]
+layout_mode = 0
+offset_left = 430.0
+offset_top = 461.0
+offset_right = 628.0
+offset_bottom = 495.0
+theme_override_styles/normal = SubResource("StyleBoxFlat_wibkk")
+text = "Refresh"
