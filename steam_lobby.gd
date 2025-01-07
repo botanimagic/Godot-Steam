@@ -13,6 +13,8 @@ enum search_distance { Close, Default, Far, Worldwide}
 @onready var player_count: Label = $Players/PlayerCount
 @onready var player_list: RichTextLabel = $Players/PlayerList
 @onready var chat_input: TextEdit = $SendMessage/ChatInput
+@onready var avatar: TextureRect = $Avatar
+
 
 
 # Buttons
@@ -41,7 +43,9 @@ func _ready() -> void:
 	Steam.lobby_joined.connect(_on_lobby_joined) #
 	Steam.lobby_match_list.connect(_on_lobby_match_list) #
 	Steam.lobby_message.connect(_on_lobby_message) #
-	#Steam.persona_state_change.connect(_on_persona_change)
+	Steam.persona_state_change.connect(_on_persona_change)
+	Steam.getPlayerAvatar()
+	Steam.avatar_loaded.connect(_on_loaded_avatar)
 
 	# Check for command line arguments
 	check_command_line()
@@ -222,6 +226,35 @@ func _on_lobby_message(_result, _user, _message, _type):
 	var sender = Steam.getFriendPersonaName(_user)
 	display_message(str(sender) + " : " + str(_message))
 
+
+#
+func _on_loaded_avatar(user_id: int, avatar_size: int, avatar_buffer: PackedByteArray) -> void:
+	print("Avatar for user: %s" % user_id)
+	print("Size: %s" % avatar_size)
+
+	# Create the image and texture for loading
+	var avatar_image: Image = Image.create_from_data(avatar_size, avatar_size, false, Image.FORMAT_RGBA8, avatar_buffer)
+
+	# Optionally resize the image if it is too large
+	if avatar_size > 128:
+		avatar_image.resize(128, 128, Image.INTERPOLATE_LANCZOS)
+
+	# Apply the image to a texture
+	var avatar_texture: ImageTexture = ImageTexture.create_from_image(avatar_image)
+
+	# Set the texture to a Sprite, TextureRect, etc.
+	avatar.set_texture(avatar_texture)
+
+# A user's information has changed
+func _on_persona_change(this_steam_id: int, _flag: int) -> void:
+	# Make sure you're in a lobby and this user is valid or Steam might spam your console log
+	if Global.lobby_id > 0:
+		print("A user (%s) had information change, update the lobby list" % this_steam_id)
+	
+		# Update the player list
+		get_lobby_members()
+
+	
 
 # ===================================
 # ===== COMMAND LINE ARGUMENTS  =====

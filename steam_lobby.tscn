@@ -1,6 +1,7 @@
-[gd_scene load_steps=2 format=3 uid="uid://banhawbidmyuo"]
+[gd_scene load_steps=3 format=3 uid="uid://banhawbidmyuo"]
 
 [ext_resource type="Script" path="res://steam_lobby.gd" id="1_tta3j"]
+[ext_resource type="Texture2D" uid="uid://bq3ru7v2ckj5s" path="res://icon.svg" id="2_7pdwg"]
 
 [node name="SteamLobby" type="Node2D"]
 script = ExtResource("1_tta3j")
@@ -40,6 +41,14 @@ offset_top = 226.0
 offset_right = 1749.0
 offset_bottom = 314.0
 text = "Start Game"
+
+[node name="Avatar" type="TextureRect" parent="."]
+offset_left = 1660.0
+offset_top = 57.0
+offset_right = 1744.0
+offset_bottom = 141.0
+texture = ExtResource("2_7pdwg")
+expand_mode = 1
 
 [node name="SteamName" type="Label" parent="."]
 offset_left = 1567.0
