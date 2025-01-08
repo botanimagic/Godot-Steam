@@ -132,6 +132,12 @@ func leave_lobby() -> void:
 		for player in player_list_vbox.get_children():
 			player.hide()
 			player.queue_free()
+			
+		# Reset matchmaking state and button, and enable it
+		auto_matchmaking_active = false
+		matchmaking_button.text = "Matchmaking"
+		matchmaking_button.set_disabled(false)  # Enable the button when leaving lobby
+		
 		# Enable the create lobby button
 		create_lobby_button.set_disabled(false)
 		# Disable the leave lobby button and all test buttons
@@ -274,10 +280,16 @@ func _on_lobby_created(connect_result: int, _lobby_id: int) -> void:
 		var IS_RELAY: bool = Steam.allowP2PPacketRelay(true)
 		output.append_text("[STEAM] Allowing Steam to be relay backup: "+str(IS_RELAY)+"\n")
 
+		# Reset matchmaking state and button, and disable it
+		auto_matchmaking_active = false
+		matchmaking_button.text = "Matchmaking"
+		matchmaking_button.set_disabled(true)  # Disable the button when creating lobby
+
 		# Enable the leave lobby button and all testing buttons
 		change_button_states(false)
 	else:
 		output.append_text("[STEAM] Failed to create lobby\n")
+
 
 # When a lobby is joined
 func _on_lobby_joined(lobby_id: int, _permissions: int, _locked: bool, response: int) -> void:
@@ -289,27 +301,31 @@ func _on_lobby_joined(lobby_id: int, _permissions: int, _locked: bool, response:
 		label_lobby_id.text = "Lobby ID: " + str(lobby_id)
 		# Append to output
 		output.append_text("[STEAM] Joined lobby "+str(lobby_id)+".\n")
+		
+		# Reset matchmaking state and button, and disable it
+		auto_matchmaking_active = false
+		matchmaking_button.text = "Matchmaking"
+		matchmaking_button.set_disabled(true)  # Disable the button when in lobby
+		
 		# Get the lobby members
 		get_lobby_members()
 		# Enable all necessary buttons
 		change_button_states(false)
-		# Make the initial handshake
-		#make_p2p_handshake()
 	# Else it failed for some reason
 	else:
 		# Get the failure reason
 		var FAIL_REASON: String
 		match response:
-			2:	FAIL_REASON = "This lobby no longer exists."
-			3:	FAIL_REASON = "You don't have permission to join this lobby."
-			4:	FAIL_REASON = "The lobby is now full."
-			5:	FAIL_REASON = "Uh... something unexpected happened!"
-			6:	FAIL_REASON = "You are banned from this lobby."
-			7:	FAIL_REASON = "You cannot join due to having a limited account."
-			8:	FAIL_REASON = "This lobby is locked or disabled."
-			9:	FAIL_REASON = "This lobby is community locked."
-			10:	FAIL_REASON = "A user in the lobby has blocked you from joining."
-			11:	FAIL_REASON = "A user you have blocked is in the lobby."
+			2:    FAIL_REASON = "This lobby no longer exists."
+			3:    FAIL_REASON = "You don't have permission to join this lobby."
+			4:    FAIL_REASON = "The lobby is now full."
+			5:    FAIL_REASON = "Uh... something unexpected happened!"
+			6:    FAIL_REASON = "You are banned from this lobby."
+			7:    FAIL_REASON = "You cannot join due to having a limited account."
+			8:    FAIL_REASON = "This lobby is locked or disabled."
+			9:    FAIL_REASON = "This lobby is community locked."
+			10:    FAIL_REASON = "A user in the lobby has blocked you from joining."
+			11:    FAIL_REASON = "A user you have blocked is in the lobby."
 		output.append_text("[STEAM] Failed joining lobby "+str(lobby_id)+": "+str(FAIL_REASON)+"\n")
 		# Reopen the server list
 		_on_open_lobby_list_pressed()
@@ -472,7 +488,20 @@ func check_command_line():
 func start_auto_matchmaking() -> void:
 	matchmaking_phase = 0
 	auto_matchmaking_active = true
+	output.append_text("[STEAM] Starting auto-matchmaking...\n")
+	
+	# Update button text to show Cancel
+	matchmaking_button.text = "Cancel Matchmaking"
+	
 	matchmaking_loop()
+
+func cancel_auto_matchmaking() -> void:
+	auto_matchmaking_active = false
+	matchmaking_phase = 0
+	output.append_text("[STEAM] Auto-matchmaking cancelled.\n")
+	
+	# Reset button text
+	matchmaking_button.text = "Matchmaking"
 
 func matchmaking_loop() -> void:
 	if matchmaking_phase < 4 and auto_matchmaking_active:
@@ -520,7 +549,12 @@ func _on_open_lobby_list_pressed():
 #
 func _on_matchmaking_pressed():
 	print("matchmaking pressed")
-	start_auto_matchmaking()
+	if auto_matchmaking_active:
+		print("canceling matchmaking")
+		cancel_auto_matchmaking()
+	else:
+		print("starting matchmaking")
+		start_auto_matchmaking()
 
 #
 func _on_get_lobby_data_pressed():
