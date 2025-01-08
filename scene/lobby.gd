@@ -11,6 +11,7 @@ enum LOBBY_AVAILABILITY { PRIVATE, FRIENDS, PUBLIC, INVISIBLE }
 
 @onready var create_lobby_button: Button = $Frame/SideBar/List/CreateLobby
 @onready var open_lobby_list_button: Button = $Frame/SideBar/List/OpenLobbyList
+@onready var matchmaking_button: Button = $Frame/SideBar/List/Matchmaking
 @onready var get_lobby_data_button: Button = $Frame/SideBar/List/GetLobbyData
 @onready var leave_button: Button = $Frame/SideBar/List/Leave
 @onready var send_button: Button = $Frame/Main/Messaging/Send
@@ -31,6 +32,9 @@ enum LOBBY_AVAILABILITY { PRIVATE, FRIENDS, PUBLIC, INVISIBLE }
 var lobby_id: int = 0
 var lobby_members: Array = []
 var lobby_max_members: int = 10
+
+var matchmaking_phase: int = 0  # Tracks which phase of matchmaking we're in
+var auto_matchmaking_active: bool = false  # Tracks if auto-matchmaking is active
 
 
 func _ready() -> void:
@@ -318,24 +322,47 @@ func _on_lobby_message(_result: int, user: int, message: String, type: int) -> v
 
 # Getting a lobby match list
 func _on_lobby_match_list(lobbies: Array) -> void:
-	# Show the list 
-	for lobby_id in lobbies:
-		# Pull lobby data from Steam
-		var lobby_name: String = Steam.getLobbyData(lobby_id, "name")
-		var lobby_mode: String = Steam.getLobbyData(lobby_id, "mode")
-		var lobby_member_count: int = Steam.getNumLobbyMembers(lobby_id)
-		# Create a button for the lobby
-		var lobby_button: Button = Button.new()
-		lobby_button.set_text("Lobby "+str(lobby_id)+": "+str(lobby_name)+" ["+str(lobby_mode)+"] - "+str(lobby_member_count)+" Player(s)")
-		lobby_button.set_size(Vector2(800, 50))
-		lobby_button.set_name("lobby_"+str(lobby_id))
-		lobby_button.set_text_alignment(HORIZONTAL_ALIGNMENT_LEFT)
-		lobby_button.set_theme(button_theme)
-		lobby_button.pressed.connect(join_lobby.bind(lobby_id))
-		# Add the new lobby to the list
-		lobbies_list_vbox.add_child(lobby_button)
-	# Enable the refresh button
-	lobbies_refresh_button.set_disabled(false)
+	if auto_matchmaking_active:
+		var attempting_join: bool = false
+		
+		# Show the list 
+		for lobby_id in lobbies:
+			# Pull lobby data from Steam
+			var lobby_member_count: int = Steam.getNumLobbyMembers(lobby_id)
+			
+			# Attempt to join the first lobby that fits the criteria
+			if lobby_member_count < lobby_max_members and not attempting_join:
+				attempting_join = true
+				output.append_text("[STEAM] Found matching lobby, attempting to join...\n")
+				join_lobby(lobby_id)
+		
+		# If no suitable lobby was found, try next phase
+		if not attempting_join:
+			matchmaking_phase += 1
+			matchmaking_loop()
+	else:
+		# Original lobby list code for manual selection
+		for lobby_id in lobbies:
+			# Pull lobby data from Steam
+			var lobby_name: String = Steam.getLobbyData(lobby_id, "name")
+			var lobby_mode: String = Steam.getLobbyData(lobby_id, "mode")
+			var lobby_member_count: int = Steam.getNumLobbyMembers(lobby_id)
+			
+			# Create a button for the lobby
+			var lobby_button: Button = Button.new()
+			lobby_button.set_text("Lobby "+str(lobby_id)+": "+str(lobby_name)+" ["+str(lobby_mode)+"] - "+str(lobby_member_count)+" Player(s)")
+			lobby_button.set_size(Vector2(800, 50))
+			lobby_button.set_name("lobby_"+str(lobby_id))
+			lobby_button.set_text_alignment(HORIZONTAL_ALIGNMENT_LEFT)
+			lobby_button.set_theme(button_theme)
+			lobby_button.pressed.connect(join_lobby.bind(lobby_id))
+			
+			# Add the new lobby to the list
+			lobbies_list_vbox.add_child(lobby_button)
+			
+		# Enable the refresh button
+		lobbies_refresh_button.set_disabled(false)
+
 
 # When a lobby chat is updated
 func _on_lobby_chat_update(lobby_id: int, changed_id: int, making_change_id: int, chat_state: int) -> void:
@@ -438,6 +465,32 @@ func check_command_line():
 				join_lobby(int(ARGUMENTS[1]))
 
 
+#################################################
+# Auto Matchmaking
+#################################################
+# Auto-matchmaking functions
+func start_auto_matchmaking() -> void:
+	matchmaking_phase = 0
+	auto_matchmaking_active = true
+	matchmaking_loop()
+
+func matchmaking_loop() -> void:
+	if matchmaking_phase < 4 and auto_matchmaking_active:
+		# Set the distance filter based on phase
+		Steam.addRequestLobbyListDistanceFilter(matchmaking_phase)
+		
+		# You can add additional filters here, for example:
+		# Steam.addRequestLobbyListStringFilter("mode", "your_game_mode", Steam.LOBBY_COMPARISON_EQUAL)
+		# Steam.addRequestLobbyListFilterSlotsAvailable(1)  # At least one slot available
+		
+		# Request the lobby list
+		Steam.requestLobbyList()
+	else:
+		auto_matchmaking_active = false
+		output.append_text("[STEAM] Auto-matchmaking failed to find a suitable lobby. Please try again.\n")
+
+
+
 # =====================================
 # ===== BUTTONS SIGNAL FUNCTIONS  =====
 # =====================================
@@ -445,6 +498,7 @@ func check_command_line():
 func buttons_signal_connections():
 	create_lobby_button.connect("pressed", _on_create_lobby_pressed)
 	open_lobby_list_button.connect("pressed", _on_open_lobby_list_pressed)
+	matchmaking_button.connect("pressed", _on_matchmaking_pressed)
 	get_lobby_data_button.connect("pressed", _on_get_lobby_data_pressed)
 	#start_game_button.connect("pressed", _on_start_game_pressed)
 	leave_button.connect("pressed", _on_leave_lobby_pressed)
@@ -461,6 +515,12 @@ func _on_create_lobby_pressed():
 func _on_open_lobby_list_pressed():
 	print("open lobby list pressed")
 	open_lobby_list()
+
+
+#
+func _on_matchmaking_pressed():
+	print("matchmaking pressed")
+	start_auto_matchmaking()
 
 #
 func _on_get_lobby_data_pressed():
