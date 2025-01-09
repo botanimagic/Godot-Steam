@@ -11,7 +11,7 @@ config_version=5
 [application]
 
 config/name="Steam Lobby"
-run/main_scene="res://steam_lobby.tscn"
+run/main_scene="res://scene/lobby.tscn"
 config/features=PackedStringArray("4.3", "Forward Plus")
 config/icon="res://icon.svg"
 

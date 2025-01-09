@@ -314,15 +314,15 @@ func _on_lobby_created(connect_result: int, _lobby_id: int) -> void:
 
 
 # When a lobby is joined
-func _on_lobby_joined(lobby_id: int, _permissions: int, _locked: bool, response: int) -> void:
+func _on_lobby_joined(_lobby_id: int, _permissions: int, _locked: bool, response: int) -> void:
 	# If joining succeed, this will be 1
 	if response == 1:
 		# Set this lobby ID as your lobby ID
-		lobby_id = lobby_id
+		lobby_id = _lobby_id
 		# Print the lobby ID to a label
-		label_lobby_id.text = "Lobby ID: " + str(lobby_id)
+		label_lobby_id.text = "Lobby ID: " + str(_lobby_id)
 		# Append to output
-		output.append_text("[STEAM] Joined lobby "+str(lobby_id)+".\n")
+		output.append_text("[STEAM] Joined lobby "+str(_lobby_id)+".\n")
 		
 		# Reset matchmaking state and button, and disable it
 		auto_matchmaking_active = false
@@ -349,7 +349,7 @@ func _on_lobby_joined(lobby_id: int, _permissions: int, _locked: bool, response:
 			9:    FAIL_REASON = "This lobby is community locked."
 			10:    FAIL_REASON = "A user in the lobby has blocked you from joining."
 			11:    FAIL_REASON = "A user you have blocked is in the lobby."
-		output.append_text("[STEAM] Failed joining lobby "+str(lobby_id)+": "+str(FAIL_REASON)+"\n")
+		output.append_text("[STEAM] Failed joining lobby "+str(_lobby_id)+": "+str(FAIL_REASON)+"\n")
 		# Reopen the server list
 		_on_open_lobby_list_pressed()
 
@@ -369,16 +369,16 @@ func _on_lobby_match_list(lobbies: Array) -> void:
 		output.append_text("[STEAM] Looking for "+selected_mode.to_upper()+" mode lobbies\n")
 		
 		# First, collect all matching lobbies
-		for lobby_id in lobbies:
-			var lobby_member_count: int = Steam.getNumLobbyMembers(lobby_id)
-			var lobby_mode: String = Steam.getLobbyData(lobby_id, "mode")
-			var lobby_name: String = Steam.getLobbyData(lobby_id, "name")
+		for _lobby_id in lobbies:
+			var lobby_member_count: int = Steam.getNumLobbyMembers(_lobby_id)
+			var lobby_mode: String = Steam.getLobbyData(_lobby_id, "mode")
+			var lobby_name: String = Steam.getLobbyData(_lobby_id, "name")
 			
-			output.append_text("[STEAM] Checking lobby "+str(lobby_id)+": Mode="+lobby_mode+" Players="+str(lobby_member_count)+" Name="+lobby_name+"\n")
+			output.append_text("[STEAM] Checking lobby "+str(_lobby_id)+": Mode="+lobby_mode+" Players="+str(lobby_member_count)+" Name="+lobby_name+"\n")
 			
 			# Add to matching lobbies if criteria matches
 			if lobby_member_count < lobby_max_members and lobby_mode == selected_mode:
-				matching_lobbies.append(lobby_id)
+				matching_lobbies.append(_lobby_id)
 		
 		# If we found matching lobbies, randomly select one
 		if matching_lobbies.size() > 0:
@@ -397,19 +397,19 @@ func _on_lobby_match_list(lobbies: Array) -> void:
 			matchmaking_loop()
 	else:
 		# Original lobby list code for manual selection
-		for lobby_id in lobbies:
-			var lobby_name: String = Steam.getLobbyData(lobby_id, "name")
-			var lobby_mode: String = Steam.getLobbyData(lobby_id, "mode").to_upper()
-			var lobby_member_count: int = Steam.getNumLobbyMembers(lobby_id)
+		for _lobby_id in lobbies:
+			var lobby_name: String = Steam.getLobbyData(_lobby_id, "name")
+			var lobby_mode: String = Steam.getLobbyData(_lobby_id, "mode").to_upper()
+			var lobby_member_count: int = Steam.getNumLobbyMembers(_lobby_id)
 			
 			# Create a button for the lobby
 			var lobby_button: Button = Button.new()
-			lobby_button.set_text("Lobby "+str(lobby_id)+": "+str(lobby_name)+" ["+str(lobby_mode)+"] - "+str(lobby_member_count)+" Player(s)")
+			lobby_button.set_text("Lobby "+str(_lobby_id)+": "+str(lobby_name)+" ["+str(lobby_mode)+"] - "+str(lobby_member_count)+" Player(s)")
 			lobby_button.set_size(Vector2(800, 50))
-			lobby_button.set_name("lobby_"+str(lobby_id))
+			lobby_button.set_name("lobby_"+str(_lobby_id))
 			lobby_button.set_text_alignment(HORIZONTAL_ALIGNMENT_LEFT)
 			lobby_button.set_theme(button_theme)
-			lobby_button.pressed.connect(join_lobby.bind(lobby_id))
+			lobby_button.pressed.connect(join_lobby.bind(_lobby_id))
 			
 			# Add the new lobby to the list
 			lobbies_list_vbox.add_child(lobby_button)
@@ -418,9 +418,9 @@ func _on_lobby_match_list(lobbies: Array) -> void:
 		lobbies_refresh_button.set_disabled(false)
 
 # When a lobby chat is updated
-func _on_lobby_chat_update(lobby_id: int, changed_id: int, making_change_id: int, chat_state: int) -> void:
+func _on_lobby_chat_update(_lobby_id: int, changed_id: int, making_change_id: int, chat_state: int) -> void:
 	# Note that chat state changes is: 1 - entered, 2 - left, 4 - user disconnected before leaving, 8 - user was kicked, 16 - user was banned
-	print("[STEAM] Lobby ID: "+str(lobby_id)+", Changed ID: "+str(changed_id)+", Making Change: "+str(making_change_id)+", Chat State: "+str(chat_state))
+	print("[STEAM] Lobby ID: "+str(_lobby_id)+", Changed ID: "+str(changed_id)+", Making Change: "+str(making_change_id)+", Chat State: "+str(chat_state))
 	# Get the user who has made the lobby change
 	var CHANGER = Steam.getFriendPersonaName(changed_id)
 	# If a player has joined the lobby
@@ -443,20 +443,20 @@ func _on_lobby_chat_update(lobby_id: int, changed_id: int, making_change_id: int
 
 
 # Whan lobby metadata has changed
-func _on_lobby_data_update(lobby_id: int, memberID: int, key: int) -> void:
-	print("[STEAM] Success, Lobby ID: "+str(lobby_id)+", Member ID: "+str(memberID)+", Key: "+str(key)+"\n\n")
+func _on_lobby_data_update(_lobby_id: int, memberID: int, key: int) -> void:
+	print("[STEAM] Success, Lobby ID: "+str(_lobby_id)+", Member ID: "+str(memberID)+", Key: "+str(key)+"\n\n")
 
 # When getting a lobby invitation
-func _on_lobby_invite(inviter: int, lobby_id: int, game_id: int) -> void:
-	output.append_text("[STEAM] You have received an invite from "+str(Steam.getFriendPersonaName(inviter))+" to join lobby "+str(lobby_id)+" / game "+str(game_id)+"\n")
+func _on_lobby_invite(inviter: int, _lobby_id: int, game_id: int) -> void:
+	output.append_text("[STEAM] You have received an invite from "+str(Steam.getFriendPersonaName(inviter))+" to join lobby "+str(_lobby_id)+" / game "+str(game_id)+"\n")
 
 # When accepting an invite
-func _on_lobby_join_requested(lobby_id: int, friend_id: int) -> void:
+func _on_lobby_join_requested(_lobby_id: int, friend_id: int) -> void:
 	# Get the lobby owner's name
 	var OWNER_NAME = Steam.getFriendPersonaName(friend_id)
 	output.append_text("[STEAM] Joining "+str(OWNER_NAME)+"'s lobby...\n")
 	# Attempt to join the lobby
-	join_lobby(lobby_id)
+	join_lobby(_lobby_id)
 
 # A user's information has changed
 func _on_persona_change(steam_id: int, _flag: int) -> void:
@@ -567,8 +567,8 @@ func matchmaking_loop() -> void:
 		output.append_text("[STEAM] No suitable lobbies found. Creating new lobby...\n")
 		_create_lobby()
 
-func is_valid_game_mode_match(lobby_id: int) -> bool:
-	var lobby_mode: String = Steam.getLobbyData(lobby_id, "mode")
+func is_valid_game_mode_match(_lobby_id: int) -> bool:
+	var lobby_mode: String = Steam.getLobbyData(_lobby_id, "mode")
 	var selected_mode = "classic" if game_mode_selector.get_selected_id() == GAME_MODE.CLASSIC else "ranked"
 	return lobby_mode == selected_mode
 
