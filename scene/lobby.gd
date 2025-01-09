@@ -18,8 +18,6 @@ enum LOBBY_AVAILABILITY { PRIVATE, FRIENDS, PUBLIC, INVISIBLE }
 @onready var matchmaking_button: Button = $Frame/SideBar/List/Matchmaking
 @onready var game_mode_selector: OptionButton = $Frame/SideBar/List/GameModeSelector
 
-
-
 @onready var chat_input: LineEdit = $Frame/Main/Messaging/Chat
 
 @onready var player_list_title: Label = $Frame/Main/Displays/PlayerLists/Title
@@ -39,6 +37,7 @@ var lobby_max_members: int = 10
 var matchmaking_phase: int = 0  # Tracks which phase of matchmaking we're in
 var auto_matchmaking_active: bool = false  # Tracks if auto-matchmaking is active
 
+var rng = RandomNumberGenerator.new()
 
 func _ready() -> void:
 	# Buttons Connections
@@ -54,6 +53,8 @@ func _ready() -> void:
 	Helper.connect_signal(Steam.join_requested, _on_lobby_join_requested)
 	Helper.connect_signal(Steam.persona_state_change, _on_persona_change)
 	
+	# Initialize random number generator
+	rng.randomize()
 	
 	# Initialize game mode selector
 	game_mode_selector.add_item("Classic", GAME_MODE.CLASSIC)
@@ -62,6 +63,7 @@ func _ready() -> void:
 	
 	# Check for command line arguments
 	check_command_line()
+
 
 
 # Send the message by pressing enter
@@ -360,32 +362,42 @@ func _on_lobby_message(_result: int, user: int, message: String, type: int) -> v
 # Getting a lobby match list
 func _on_lobby_match_list(lobbies: Array) -> void:
 	if auto_matchmaking_active:
-		var attempting_join: bool = false
 		var selected_mode = "classic" if game_mode_selector.get_selected_id() == GAME_MODE.CLASSIC else "ranked"
+		var matching_lobbies: Array = []
 		
 		output.append_text("[STEAM] Found "+str(lobbies.size())+" total lobbies\n")
 		output.append_text("[STEAM] Looking for "+selected_mode.to_upper()+" mode lobbies\n")
 		
+		# First, collect all matching lobbies
 		for lobby_id in lobbies:
 			var lobby_member_count: int = Steam.getNumLobbyMembers(lobby_id)
 			var lobby_mode: String = Steam.getLobbyData(lobby_id, "mode")
+			var lobby_name: String = Steam.getLobbyData(lobby_id, "name")
 			
-			output.append_text("[STEAM] Checking lobby "+str(lobby_id)+": Mode="+lobby_mode+" Players="+str(lobby_member_count)+"\n")
+			output.append_text("[STEAM] Checking lobby "+str(lobby_id)+": Mode="+lobby_mode+" Players="+str(lobby_member_count)+" Name="+lobby_name+"\n")
 			
-			# Attempt to join if lobby matches criteria
-			if lobby_member_count < lobby_max_members and lobby_mode == selected_mode and not attempting_join:
-				attempting_join = true
-				output.append_text("[STEAM] Found matching "+lobby_mode.to_upper()+" lobby, attempting to join...\n")
-				join_lobby(lobby_id)
+			# Add to matching lobbies if criteria matches
+			if lobby_member_count < lobby_max_members and lobby_mode == selected_mode:
+				matching_lobbies.append(lobby_id)
 		
-		if not attempting_join:
+		# If we found matching lobbies, randomly select one
+		if matching_lobbies.size() > 0:
+			# Randomize the matching lobbies
+			matching_lobbies.shuffle()
+			
+			# Get the first (random) lobby from the shuffled list
+			var selected_lobby = matching_lobbies[0]
+			var lobby_name = Steam.getLobbyData(selected_lobby, "name")
+			
+			output.append_text("[STEAM] Randomly selected lobby: "+lobby_name+"\n")
+			join_lobby(selected_lobby)
+		else:
 			output.append_text("[STEAM] No matching "+selected_mode.to_upper()+" lobbies in phase "+str(matchmaking_phase)+"\n")
 			matchmaking_phase += 1
 			matchmaking_loop()
 	else:
 		# Original lobby list code for manual selection
 		for lobby_id in lobbies:
-			# Pull lobby data from Steam
 			var lobby_name: String = Steam.getLobbyData(lobby_id, "name")
 			var lobby_mode: String = Steam.getLobbyData(lobby_id, "mode").to_upper()
 			var lobby_member_count: int = Steam.getNumLobbyMembers(lobby_id)
@@ -404,7 +416,6 @@ func _on_lobby_match_list(lobbies: Array) -> void:
 			
 		# Enable the refresh button
 		lobbies_refresh_button.set_disabled(false)
-
 
 # When a lobby chat is updated
 func _on_lobby_chat_update(lobby_id: int, changed_id: int, making_change_id: int, chat_state: int) -> void:
