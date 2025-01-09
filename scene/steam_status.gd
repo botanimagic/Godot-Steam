@@ -4,12 +4,18 @@ extends Panel
 #################################################
 # Displays general Steamworks stuff
 
+@onready var title: Label = $Status/Title
+@onready var id: Label = $Status/ID
+@onready var username: Label = $Status/Username
+@onready var owns: Label = $Status/Owns
+
+
 
 func _ready() -> void:
 	if Global.is_online:
-		$Status/Title.set_text("Steamworks Status (Online)")
+		title.set_text("Steamworks Status (Online)")
 	else:
-		$Status/Title.set_text("Steamworks Status (Offline)")
-	$Status/ID.set_text("Steam ID: "+str(Global.steam_id))
-	$Status/Username.set_text("Username: "+str(Global.steam_username))
-	$Status/Owns.set_text("Owns App: "+str(Global.is_owned))
+		title.set_text("Steamworks Status (Offline)")
+	id.set_text("Steam ID: "+str(Global.steam_id))
+	username.set_text("Username: "+str(Global.steam_username))
+	owns.set_text("Owns App: "+str(Global.is_owned))

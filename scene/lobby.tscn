@@ -170,12 +170,6 @@ layout_mode = 2
 theme_override_font_sizes/font_size = 20
 text = "Open Lobby List"
 
-[node name="Matchmaking" type="Button" parent="Frame/SideBar/List"]
-custom_minimum_size = Vector2(0, 50)
-layout_mode = 2
-theme_override_font_sizes/font_size = 20
-text = "Matchmaking"
-
 [node name="GetLobbyData" type="Button" parent="Frame/SideBar/List"]
 custom_minimum_size = Vector2(0, 50)
 layout_mode = 2
@@ -190,9 +184,23 @@ theme_override_font_sizes/font_size = 20
 disabled = true
 text = "Leave Lobby"
 
-[node name="Label" type="Label" parent="Frame/SideBar/List"]
+[node name="GameModeTitle" type="Label" parent="Frame/SideBar/List"]
 custom_minimum_size = Vector2(0, 50)
 layout_mode = 2
+theme_override_font_sizes/font_size = 20
+text = "Game Mode :"
+vertical_alignment = 1
+
+[node name="Matchmaking" type="Button" parent="Frame/SideBar/List"]
+custom_minimum_size = Vector2(0, 50)
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+text = "Matchmaking"
+
+[node name="GameModeSelector" type="OptionButton" parent="Frame/SideBar/List"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+alignment = 1
 
 [node name="Lobbies" type="Panel" parent="."]
 visible = false

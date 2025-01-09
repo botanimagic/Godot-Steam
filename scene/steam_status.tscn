@@ -19,7 +19,7 @@ layout_mode = 2
 theme_override_font_sizes/font_size = 20
 text = "STEAM"
 
-[node name="Title2" type="Label" parent="Status"]
+[node name="empty" type="Label" parent="Status"]
 layout_mode = 2
 
 [node name="ID" type="Label" parent="Status"]

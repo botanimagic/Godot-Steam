@@ -1,5 +1,6 @@
 extends Panel
 
+enum GAME_MODE { CLASSIC, RANKED }
 enum LOBBY_AVAILABILITY { PRIVATE, FRIENDS, PUBLIC, INVISIBLE }
 
 @onready var lobby_member_scene = preload("res://scene/lobby_member.tscn")
@@ -11,10 +12,12 @@ enum LOBBY_AVAILABILITY { PRIVATE, FRIENDS, PUBLIC, INVISIBLE }
 
 @onready var create_lobby_button: Button = $Frame/SideBar/List/CreateLobby
 @onready var open_lobby_list_button: Button = $Frame/SideBar/List/OpenLobbyList
-@onready var matchmaking_button: Button = $Frame/SideBar/List/Matchmaking
 @onready var get_lobby_data_button: Button = $Frame/SideBar/List/GetLobbyData
 @onready var leave_button: Button = $Frame/SideBar/List/Leave
 @onready var send_button: Button = $Frame/Main/Messaging/Send
+@onready var matchmaking_button: Button = $Frame/SideBar/List/Matchmaking
+@onready var game_mode_selector: OptionButton = $Frame/SideBar/List/GameModeSelector
+
 
 
 @onready var chat_input: LineEdit = $Frame/Main/Messaging/Chat
@@ -51,6 +54,12 @@ func _ready() -> void:
 	Helper.connect_signal(Steam.join_requested, _on_lobby_join_requested)
 	Helper.connect_signal(Steam.persona_state_change, _on_persona_change)
 	
+	
+	# Initialize game mode selector
+	game_mode_selector.add_item("Classic", GAME_MODE.CLASSIC)
+	game_mode_selector.add_item("Ranked", GAME_MODE.RANKED)
+	game_mode_selector.select(0)  # Default to Classic
+	
 	# Check for command line arguments
 	check_command_line()
 
@@ -65,9 +74,9 @@ func _input(ev: InputEvent) -> void:
 # LOBBY FUNCTIONS
 #################################################
 # Creating a lobby
-func _on_create_lobby() -> void:
+func _create_lobby() -> void:
 	# Attempt to create a lobby
-	create_lobby()
+	create_lobby_for_player()
 	output.append_text("[STEAM] Attempt to create a new lobby...\n")
 	# Disable the create lobby button
 	create_lobby_button.set_disabled(true)
@@ -81,13 +90,25 @@ func _get_lobby_data() -> void:
 	data = Steam.getLobbyData(lobby_id, "mode")
 	output.append_text("[STEAM] Lobby data, mode: "+str(data)+"\n")
 
+# Kick player 
+func _on_kick_player_in_lobby(kick_id: int) -> void:
+	# Pass the kick message to Steam
+	var IS_SENT: bool = Steam.sendLobbyChatMsg(lobby_id, "/kick:"+str(kick_id))
+	# Was it send successfully?
+	if not IS_SENT:
+		print("[ERROR] Kick command failed to send.\n")
+
 
 # When the user starts a game with multiplayer enabled
-func create_lobby() -> void:
+func create_lobby_for_player() -> void:
 	# Make sure a lobby is not already set
 	if lobby_id == 0:
 		# Set the lobby to public with ten members max
 		Steam.createLobby(Steam.LOBBY_TYPE_PUBLIC, lobby_max_members)
+		
+		# Set game mode immediately after creation
+		var mode_text = "classic" if game_mode_selector.get_selected_id() == GAME_MODE.CLASSIC else "ranked"
+		Steam.setLobbyData(lobby_id, "mode", mode_text)
 
 
 # When the player is joining a lobby
@@ -100,14 +121,6 @@ func join_lobby(_lobby_id: int) -> void:
 	lobby_members.clear()
 	# Make the lobby join request to Steam
 	Steam.joinLobby(lobby_id)
-
-
-func _on_lobby_kick_pressed(kick_id: int) -> void:
-	# Pass the kick message to Steam
-	var IS_SENT: bool = Steam.sendLobbyChatMsg(lobby_id, "/kick:"+str(kick_id))
-	# Was it send successfully?
-	if not IS_SENT:
-		print("[ERROR] Kick command failed to send.\n")
 
 
 # When the player leaves a lobby for whatever reason
@@ -137,6 +150,7 @@ func leave_lobby() -> void:
 		auto_matchmaking_active = false
 		matchmaking_button.text = "Matchmaking"
 		matchmaking_button.set_disabled(false)  # Enable the button when leaving lobby
+		game_mode_selector.set_disabled(false)  # Re-enable game mode selector when leaving lobby
 		
 		# Enable the create lobby button
 		create_lobby_button.set_disabled(false)
@@ -165,6 +179,7 @@ func get_lobby_members() -> void:
 		var MEMBER_STEAM_NAME: String = Steam.getFriendPersonaName(MEMBER_STEAM_ID)
 		# Add them to the player list
 		add_player_to_connect_list(MEMBER_STEAM_ID, MEMBER_STEAM_NAME)
+
 
 
 
@@ -269,21 +284,26 @@ func _on_lobby_created(connect_result: int, _lobby_id: int) -> void:
 		# Print the lobby ID to a label
 		label_lobby_id.text = "Lobby ID: " + str(lobby_id)
 
-		# Set some lobby data
+		# Set lobby data
 		var SET_LOBBY_DATA: bool = false
 		SET_LOBBY_DATA = Steam.setLobbyData(lobby_id, "name", str(Global.steam_username)+"'s Lobby")
 		print("[STEAM] Setting lobby name data successful: "+str(SET_LOBBY_DATA))
-		SET_LOBBY_DATA = Steam.setLobbyData(lobby_id, "mode", "GodotSteam test")
-		print("[STEAM] Setting lobby mode data successful: "+str(SET_LOBBY_DATA))
+		
+		# Set game mode with the current selected mode
+		var mode_text = "classic" if game_mode_selector.get_selected_id() == GAME_MODE.CLASSIC else "ranked"
+		SET_LOBBY_DATA = Steam.setLobbyData(lobby_id, "mode", mode_text)
+		output.append_text("[STEAM] Created new "+mode_text.to_upper()+" mode lobby\n")
+		print("[STEAM] Setting game mode data successful: "+str(SET_LOBBY_DATA))
 
 		# Allow P2P connections to fallback to being relayed through Steam if needed
 		var IS_RELAY: bool = Steam.allowP2PPacketRelay(true)
 		output.append_text("[STEAM] Allowing Steam to be relay backup: "+str(IS_RELAY)+"\n")
 
-		# Reset matchmaking state and button, and disable it
+ 		# Reset matchmaking state and button, and disable them
 		auto_matchmaking_active = false
 		matchmaking_button.text = "Matchmaking"
 		matchmaking_button.set_disabled(true)  # Disable the button when creating lobby
+		game_mode_selector.set_disabled(true)  # Disable game mode selector when creating lobby
 
 		# Enable the leave lobby button and all testing buttons
 		change_button_states(false)
@@ -306,6 +326,7 @@ func _on_lobby_joined(lobby_id: int, _permissions: int, _locked: bool, response:
 		auto_matchmaking_active = false
 		matchmaking_button.text = "Matchmaking"
 		matchmaking_button.set_disabled(true)  # Disable the button when in lobby
+		game_mode_selector.set_disabled(true)  # Disable game mode selector when in lobby
 		
 		# Get the lobby members
 		get_lobby_members()
@@ -340,20 +361,25 @@ func _on_lobby_message(_result: int, user: int, message: String, type: int) -> v
 func _on_lobby_match_list(lobbies: Array) -> void:
 	if auto_matchmaking_active:
 		var attempting_join: bool = false
+		var selected_mode = "classic" if game_mode_selector.get_selected_id() == GAME_MODE.CLASSIC else "ranked"
 		
-		# Show the list 
+		output.append_text("[STEAM] Found "+str(lobbies.size())+" total lobbies\n")
+		output.append_text("[STEAM] Looking for "+selected_mode.to_upper()+" mode lobbies\n")
+		
 		for lobby_id in lobbies:
-			# Pull lobby data from Steam
 			var lobby_member_count: int = Steam.getNumLobbyMembers(lobby_id)
+			var lobby_mode: String = Steam.getLobbyData(lobby_id, "mode")
 			
-			# Attempt to join the first lobby that fits the criteria
-			if lobby_member_count < lobby_max_members and not attempting_join:
+			output.append_text("[STEAM] Checking lobby "+str(lobby_id)+": Mode="+lobby_mode+" Players="+str(lobby_member_count)+"\n")
+			
+			# Attempt to join if lobby matches criteria
+			if lobby_member_count < lobby_max_members and lobby_mode == selected_mode and not attempting_join:
 				attempting_join = true
-				output.append_text("[STEAM] Found matching lobby, attempting to join...\n")
+				output.append_text("[STEAM] Found matching "+lobby_mode.to_upper()+" lobby, attempting to join...\n")
 				join_lobby(lobby_id)
 		
-		# If no suitable lobby was found, try next phase
 		if not attempting_join:
+			output.append_text("[STEAM] No matching "+selected_mode.to_upper()+" lobbies in phase "+str(matchmaking_phase)+"\n")
 			matchmaking_phase += 1
 			matchmaking_loop()
 	else:
@@ -361,7 +387,7 @@ func _on_lobby_match_list(lobbies: Array) -> void:
 		for lobby_id in lobbies:
 			# Pull lobby data from Steam
 			var lobby_name: String = Steam.getLobbyData(lobby_id, "name")
-			var lobby_mode: String = Steam.getLobbyData(lobby_id, "mode")
+			var lobby_mode: String = Steam.getLobbyData(lobby_id, "mode").to_upper()
 			var lobby_member_count: int = Steam.getNumLobbyMembers(lobby_id)
 			
 			# Create a button for the lobby
@@ -442,7 +468,7 @@ func add_player_to_connect_list(steam_id: int, steam_name: String) -> void:
 	lobby_member.name = str(steam_id)
 	lobby_member.set_member(steam_id, steam_name)
 	# Connect the kick signal
-	Helper.connect_signal(lobby_member.kick_player, _on_lobby_kick_pressed)
+	Helper.connect_signal(lobby_member.kick_player, _on_kick_player_in_lobby)
 	player_list_vbox.add_child(lobby_member)
 	
 	# If you are the host, enable the kick button
@@ -493,6 +519,9 @@ func start_auto_matchmaking() -> void:
 	# Update button text to show Cancel
 	matchmaking_button.text = "Cancel Matchmaking"
 	
+	# Disable the game mode selector during matchmaking
+	game_mode_selector.set_disabled(true)
+	
 	matchmaking_loop()
 
 func cancel_auto_matchmaking() -> void:
@@ -502,23 +531,35 @@ func cancel_auto_matchmaking() -> void:
 	
 	# Reset button text
 	matchmaking_button.text = "Matchmaking"
+	
+	# Re-enable the game mode selector
+	game_mode_selector.set_disabled(false)
 
 func matchmaking_loop() -> void:
 	if matchmaking_phase < 4 and auto_matchmaking_active:
 		# Set the distance filter based on phase
 		Steam.addRequestLobbyListDistanceFilter(matchmaking_phase)
 		
-		# You can add additional filters here, for example:
-		# Steam.addRequestLobbyListStringFilter("mode", "your_game_mode", Steam.LOBBY_COMPARISON_EQUAL)
-		# Steam.addRequestLobbyListFilterSlotsAvailable(1)  # At least one slot available
+		# Add game mode filter
+		var mode_text = "classic" if game_mode_selector.get_selected_id() == GAME_MODE.CLASSIC else "ranked"
+		Steam.addRequestLobbyListStringFilter("mode", mode_text, Steam.LOBBY_COMPARISON_EQUAL)
+		
+		# Debug output
+		output.append_text("[STEAM] Searching for "+mode_text.to_upper()+" lobbies in phase "+str(matchmaking_phase)+"...\n")
 		
 		# Request the lobby list
 		Steam.requestLobbyList()
 	else:
 		auto_matchmaking_active = false
-		output.append_text("[STEAM] Auto-matchmaking failed to find a suitable lobby. Please try again.\n")
+		matchmaking_button.text = "Matchmaking"
+		# Create a lobby if none found
+		output.append_text("[STEAM] No suitable lobbies found. Creating new lobby...\n")
+		_create_lobby()
 
-
+func is_valid_game_mode_match(lobby_id: int) -> bool:
+	var lobby_mode: String = Steam.getLobbyData(lobby_id, "mode")
+	var selected_mode = "classic" if game_mode_selector.get_selected_id() == GAME_MODE.CLASSIC else "ranked"
+	return lobby_mode == selected_mode
 
 # =====================================
 # ===== BUTTONS SIGNAL FUNCTIONS  =====
@@ -538,7 +579,7 @@ func buttons_signal_connections():
 #
 func _on_create_lobby_pressed():
 	print("create lobby pressed")
-	create_lobby()
+	_create_lobby()
 
 #
 func _on_open_lobby_list_pressed():
