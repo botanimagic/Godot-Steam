@@ -9,6 +9,8 @@ enum LOBBY_AVAILABILITY { PRIVATE, FRIENDS, PUBLIC, INVISIBLE }
 
 @onready var output: RichTextLabel = $Frame/Main/Displays/Outputs/Output
 @onready var label_lobby_id: Label = $Frame/Main/Displays/Outputs/Titles/LobbyID
+@onready var side_bar_list: VBoxContainer = $Frame/SideBar/List
+
 
 @onready var create_lobby_button: Button = $Frame/SideBar/List/CreateLobby
 @onready var open_lobby_list_button: Button = $Frame/SideBar/List/OpenLobbyList
@@ -36,7 +38,12 @@ var lobby_max_members: int = 10
 
 var matchmaking_phase: int = 0  # Tracks which phase of matchmaking we're in
 var auto_matchmaking_active: bool = false  # Tracks if auto-matchmaking is active
+var matchmaking_timer: float = 0.0
+const MATCHMAKING_TIMEOUT: float = 30.0  # Timeout after 30 seconds
+var is_matchmaking_timeout: bool = false
+var matchmaking_start_time: float = 0.0
 
+var matchmaking_progress: ProgressBar
 var rng = RandomNumberGenerator.new()
 
 func _ready() -> void:
@@ -61,10 +68,30 @@ func _ready() -> void:
 	game_mode_selector.add_item("Ranked", GAME_MODE.RANKED)
 	game_mode_selector.select(0)  # Default to Classic
 	
+	# Create progress bar
+	matchmaking_progress = ProgressBar.new()
+	matchmaking_progress.max_value = MATCHMAKING_TIMEOUT
+	matchmaking_progress.visible = false
+	side_bar_list.add_child(matchmaking_progress)
+	
 	# Check for command line arguments
 	check_command_line()
 
-
+func _process(delta: float) -> void:
+	if auto_matchmaking_active:
+		matchmaking_timer += delta
+		var elapsed_time = Time.get_unix_time_from_system() - matchmaking_start_time
+		var remaining_time = int(MATCHMAKING_TIMEOUT - matchmaking_timer)
+		
+		# Update matchmaking button text to show both cancel and countdown
+		var minutes: int = int(floor(elapsed_time / 60))
+		var seconds: int = int(floor(elapsed_time)) % 60
+		matchmaking_button.text = "Cancel Matchmaking\nSearching: %02d:%02d | Timeout: %ds" % [minutes, seconds, remaining_time]
+		
+		# Check for timeout
+		if matchmaking_timer >= MATCHMAKING_TIMEOUT and not is_matchmaking_timeout:
+			is_matchmaking_timeout = true
+			_on_matchmaking_timeout()
 
 # Send the message by pressing enter
 func _input(ev: InputEvent) -> void:
@@ -317,19 +344,31 @@ func _on_lobby_created(connect_result: int, _lobby_id: int) -> void:
 func _on_lobby_joined(_lobby_id: int, _permissions: int, _locked: bool, response: int) -> void:
 	# If joining succeed, this will be 1
 	if response == 1:
+		# Calculate total search time
+		if auto_matchmaking_active:
+			var total_time = Time.get_unix_time_from_system() - matchmaking_start_time
+			var minutes: int = int(floor(total_time / 60))
+			var seconds: int = int(floor(total_time)) % 60
+			output.append_text("[STEAM] Found lobby after %02d:%02d\n" % [minutes, seconds])
+		
+		# Reset matchmaking variables
+		matchmaking_timer = 0.0
+		is_matchmaking_timeout = false
+		auto_matchmaking_active = false
+	
 		# Set this lobby ID as your lobby ID
 		lobby_id = _lobby_id
 		# Print the lobby ID to a label
 		label_lobby_id.text = "Lobby ID: " + str(_lobby_id)
 		# Append to output
 		output.append_text("[STEAM] Joined lobby "+str(_lobby_id)+".\n")
-		
+	
 		# Reset matchmaking state and button, and disable it
 		auto_matchmaking_active = false
 		matchmaking_button.text = "Matchmaking"
 		matchmaking_button.set_disabled(true)  # Disable the button when in lobby
 		game_mode_selector.set_disabled(true)  # Disable game mode selector when in lobby
-		
+	
 		# Get the lobby members
 		get_lobby_members()
 		# Enable all necessary buttons
@@ -525,10 +564,13 @@ func check_command_line():
 func start_auto_matchmaking() -> void:
 	matchmaking_phase = 0
 	auto_matchmaking_active = true
+	matchmaking_timer = 0.0  # Reset timer
+	is_matchmaking_timeout = false
+	matchmaking_start_time = Time.get_unix_time_from_system()
 	output.append_text("[STEAM] Starting auto-matchmaking...\n")
 	
-	# Update button text to show Cancel
-	matchmaking_button.text = "Cancel Matchmaking"
+	# Update button text to show both cancel and countdown
+	matchmaking_button.text = "Cancel Matchmaking\nTimeout: 30s"
 	
 	# Disable the game mode selector during matchmaking
 	game_mode_selector.set_disabled(true)
@@ -538,7 +580,13 @@ func start_auto_matchmaking() -> void:
 func cancel_auto_matchmaking() -> void:
 	auto_matchmaking_active = false
 	matchmaking_phase = 0
-	output.append_text("[STEAM] Auto-matchmaking cancelled.\n")
+	matchmaking_timer = 0.0
+	is_matchmaking_timeout = false
+	
+	var total_time = Time.get_unix_time_from_system() - matchmaking_start_time
+	var minutes = int(floor(total_time / 60))
+	var seconds = int(floor(total_time)) % 60
+	output.append_text("[STEAM] Auto-matchmaking cancelled after %02d:%02d\n" % [minutes, seconds])
 	
 	# Reset button text
 	matchmaking_button.text = "Matchmaking"
@@ -571,6 +619,43 @@ func is_valid_game_mode_match(_lobby_id: int) -> bool:
 	var lobby_mode: String = Steam.getLobbyData(_lobby_id, "mode")
 	var selected_mode = "classic" if game_mode_selector.get_selected_id() == GAME_MODE.CLASSIC else "ranked"
 	return lobby_mode == selected_mode
+
+
+func _on_matchmaking_timeout() -> void:
+	var elapsed_time = Time.get_unix_time_from_system() - matchmaking_start_time
+	var minutes = floor(elapsed_time / 60)
+	var seconds = floor(elapsed_time) % 60
+	
+	output.append_text("[STEAM] Matchmaking search time: %02d:%02d\n" % [minutes, seconds])
+	output.append_text("[STEAM] No lobbies found. Creating new lobby...\n")
+	
+	# Cancel matchmaking and create new lobby
+	auto_matchmaking_active = false
+	matchmaking_button.text = "Matchmaking"
+	game_mode_selector.set_disabled(true)
+	_create_lobby()
+
+# Show dialog asking if player wants to continue searching
+func show_continue_dialog() -> bool:
+	# Create dialog
+	var dialog = ConfirmationDialog.new()
+	add_child(dialog)
+	
+	dialog.title = "Matchmaking Timeout"
+	dialog.dialog_text = "Matchmaking is taking longer than usual.\nDo you want to continue searching?"
+	dialog.ok_button_text = "Continue"
+	dialog.cancel_button_text = "Stop"
+	
+	# Show dialog and wait for response
+	dialog.popup_centered()
+	
+	# Wait for dialog response
+	var response = await dialog.confirmed
+	
+	# Clean up
+	dialog.queue_free()
+	
+	return response
 
 # =====================================
 # ===== BUTTONS SIGNAL FUNCTIONS  =====

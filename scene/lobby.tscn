@@ -171,7 +171,7 @@ theme_override_font_sizes/font_size = 20
 text = "Open Lobby List"
 
 [node name="Matchmaking" type="Button" parent="Frame/SideBar/List"]
-custom_minimum_size = Vector2(0, 50)
+custom_minimum_size = Vector2(0, 70)
 layout_mode = 2
 theme_override_font_sizes/font_size = 20
 text = "Matchmaking"
