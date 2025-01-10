@@ -38,15 +38,19 @@ var lobby_members: Array = []
 var lobby_max_members: int = 10
 const MIN_PLAYERS_TO_START: int = 4  # Minimum players needed to start a game
 const MIN_PLAYERS_TO_MATCHMAKE: int = 1  # Minimum players needed to start matchmaking
+const REQUIRED_PLAYERS: int = 2  # Number of players needed to start
+var is_lobby_ready: bool = false
 
 # Matchmaking System
 var is_matchmaking: bool = false
 var matchmaking_timer: float = 0.0
 const MATCHMAKING_TIMEOUT: float = 180.0  # 3 minutes timeout
 var matchmaking_start_time: float = 0.0
-#var party_searching: bool = false  # Indicates if the party is currently searching
+var matchmaking_phase: int = 0  # Add this with your other variables
 
-#var rng = RandomNumberGenerator.new()
+
+
+
 
 func _ready() -> void:
 	# Buttons Connections
@@ -76,11 +80,17 @@ func _process(delta: float) -> void:
 	if is_matchmaking:
 		matchmaking_timer += delta
 		var elapsed_time = Time.get_unix_time_from_system() - matchmaking_start_time
+		var current_players = Steam.getNumLobbyMembers(lobby_id)
 		
-		# Update button text
+		# Update button text with player count
 		var minutes: int = int(floor(elapsed_time / 60))
 		var seconds: int = int(floor(elapsed_time)) % 60
-		matchmaking_button.text = "Cancel Search\nSearching: %02d:%02d" % [minutes, seconds]
+		matchmaking_button.text = "Cancel Search (%d/%d)\nSearching: %02d:%02d" % [
+			current_players, 
+			REQUIRED_PLAYERS,
+			minutes, 
+			seconds
+		]
 		
 		# Check for timeout
 		if matchmaking_timer >= MATCHMAKING_TIMEOUT:
@@ -92,6 +102,15 @@ func _input(ev: InputEvent) -> void:
 	if ev.is_pressed() and !ev.is_echo() and ev.is_action("chat_send"):
 		send_chat()
 
+
+func transition_to_game() -> void:
+	output.append_text("[STEAM] Starting game with " + str(Steam.getNumLobbyMembers(lobby_id)) + " players...\n")
+	
+	# Store the lobby ID in Global singleton
+	Global.current_lobby_id = lobby_id
+	
+	# Change to the game scene
+	get_tree().change_scene_to_file("res://scene/game_play.tscn")
 
 #################################################
 # LOBBY FUNCTIONS
@@ -179,31 +198,37 @@ func leave_lobby() -> void:
 func get_lobby_members() -> void:
 	# Clear your previous lobby list
 	lobby_members.clear()
-	# Clear the original player list
 	for MEMBER in player_list_vbox.get_children():
 		MEMBER.hide()
 		MEMBER.queue_free()
-	# Get the number of members from this lobby from Steam
+		
+	# Get current members
 	var MEMBERS: int = Steam.getNumLobbyMembers(lobby_id)
-	# Update the player list title
 	player_list_title.set_text("Player List ("+str(MEMBERS)+")")
-	# Get the data of these players from Steam
+	
+	# Add all members to the list
 	for MEMBER in range(0, MEMBERS):
-		print(MEMBER)
-		# Get the member's Steam ID
 		var MEMBER_STEAM_ID: int = Steam.getLobbyMemberByIndex(lobby_id, MEMBER)
-		# Get the member's Steam name
 		var MEMBER_STEAM_NAME: String = Steam.getFriendPersonaName(MEMBER_STEAM_ID)
-		# Add them to the player list
 		add_player_to_connect_list(MEMBER_STEAM_ID, MEMBER_STEAM_NAME)
 	
-	var member_count = Steam.getNumLobbyMembers(lobby_id)
-	
-	# Enable matchmaking button if we're the lobby owner
+	# Update matchmaking button state for lobby owner
 	if Global.steam_id == Steam.getLobbyOwner(lobby_id):
-		matchmaking_button.disabled = false  # Always enable for lobby owner
+		matchmaking_button.set_disabled(false)
 	else:
-		matchmaking_button.disabled = true  # Only leader can start matchmaking
+		matchmaking_button.set_disabled(true)
+	
+	# Check if we should start the game
+	if MEMBERS >= REQUIRED_PLAYERS and not is_lobby_ready:
+		is_lobby_ready = true
+		
+		# If we're the host, initiate the game start
+		if Global.steam_id == Steam.getLobbyOwner(lobby_id):
+			output.append_text("[STEAM] Required players reached! Starting game...\n")
+			# Notify all players to start
+			Steam.setLobbyData(lobby_id, "game_starting", "true")
+			await get_tree().create_timer(3.0).timeout  # Give time for notification
+			transition_to_game()
 
 
 
@@ -344,29 +369,44 @@ func _on_lobby_joined(_lobby_id: int, _permissions: int, _locked: bool, response
 		# Reset matchmaking state
 		is_matchmaking = false
 		matchmaking_button.text = "Find Match"
-		matchmaking_button.set_disabled(true)
+		
+		# Only enable matchmaking button for the lobby owner
+		if Global.steam_id == Steam.getLobbyOwner(lobby_id):
+			matchmaking_button.set_disabled(false)
+		else:
+			matchmaking_button.set_disabled(true)
+		
 		game_mode_selector.set_disabled(true)
-	
+		
+		# Check if this join makes a full lobby
+		var current_members = Steam.getNumLobbyMembers(lobby_id)
+		if current_members >= REQUIRED_PLAYERS:
+			output.append_text("[STEAM] Lobby is now full! Starting game...\n")
+			# If we're the host, initiate the game start
+			if Global.steam_id == Steam.getLobbyOwner(lobby_id):
+				Steam.setLobbyData(lobby_id, "game_starting", "true")
+				await get_tree().create_timer(3.0).timeout
+				transition_to_game()
+		
 		get_lobby_members()
 		change_button_states(false)
 	else:
 		var FAIL_REASON: String
 		match response:
-			2: "This lobby no longer exists."
-			3: "You don't have permission to join this lobby."
-			4: "The lobby is now full."
-			5: "Uh... something unexpected happened!"
-			6: "You are banned from this lobby."
-			7: "You cannot join due to having a limited account."
-			8: "This lobby is locked or disabled."
-			9: "This lobby is community locked."
-			10: "A user in the lobby has blocked you from joining."
-			11: "A user you have blocked is in the lobby."
-			_: "Unknown error."
+			2: FAIL_REASON = "This lobby no longer exists."
+			3: FAIL_REASON = "You don't have permission to join this lobby."
+			4: FAIL_REASON = "The lobby is now full."
+			5: FAIL_REASON = "Uh... something unexpected happened!"
+			6: FAIL_REASON = "You are banned from this lobby."
+			7: FAIL_REASON = "You cannot join due to having a limited account."
+			8: FAIL_REASON = "This lobby is locked or disabled."
+			9: FAIL_REASON = "This lobby is community locked."
+			10: FAIL_REASON = "A user in the lobby has blocked you from joining."
+			11: FAIL_REASON = "A user you have blocked is in the lobby."
+			_: FAIL_REASON = "Unknown error."
 		
 		output.append_text("[STEAM] Failed joining lobby "+str(_lobby_id)+": "+str(FAIL_REASON)+"\n")
 		_on_open_lobby_list_pressed()
-
 
 # When a lobby message is received
 func _on_lobby_message(_result: int, user: int, message: String, type: int) -> void:
@@ -379,9 +419,9 @@ func _on_lobby_match_list(lobbies: Array) -> void:
 		var matching_lobbies: Array = []
 		var our_party_size = Steam.getNumLobbyMembers(lobby_id)
 		
-		output.append_text("[STEAM] Found %d potential lobbies\n" % lobbies.size())
+		output.append_text("[STEAM] Found %d potential lobbies in phase %d\n" % [lobbies.size(), matchmaking_phase])
 		
-		# Look for compatible lobbies
+		# First, find all potential matching lobbies
 		for potential_lobby in lobbies:
 			if potential_lobby == lobby_id:  # Skip our own lobby
 				continue
@@ -389,19 +429,34 @@ func _on_lobby_match_list(lobbies: Array) -> void:
 			var lobby_member_count = Steam.getNumLobbyMembers(potential_lobby)
 			var total_players = lobby_member_count + our_party_size
 			
-			# Check if combining would make a valid game
-			if total_players <= lobby_max_members and total_players >= MIN_PLAYERS_TO_START:
-				matching_lobbies.append(potential_lobby)
+			# Only consider lobbies that would make a full game (2 players)
+			if total_players == REQUIRED_PLAYERS:
+				var lobby_mode = Steam.getLobbyData(potential_lobby, "mode")
+				var our_mode = game_mode_selector.get_selected_id() == GAME_MODE.CLASSIC
+				
+				# Make sure game modes match
+				if (lobby_mode == "classic") == our_mode:
+					matching_lobbies.append({
+						"id": potential_lobby,
+						"members": lobby_member_count
+					})
 		
+		# If we found any matching lobbies that would make a full game
 		if matching_lobbies.size() > 0:
-			# Found compatible lobby, merge with them
-			var selected_lobby = matching_lobbies[0]
-			merge_parties(selected_lobby)
-		else:
-			# No matches found, wait and try again
-			await get_tree().create_timer(5.0).timeout
-			if is_matchmaking:
-				search_for_match()
+			# Sort by member count (highest first)
+			matching_lobbies.sort_custom(func(a, b): return a.members > b.members)
+			
+			# Merge with the fullest compatible lobby
+			var target_lobby = matching_lobbies[0]
+			output.append_text("[STEAM] Found matching lobby to make a full game! Merging...\n")
+			merge_parties(target_lobby.id)
+			return
+		
+		# No matches found that would make a full game, continue searching
+		matchmaking_phase += 1
+		await get_tree().create_timer(5.0).timeout
+		if is_matchmaking:
+			matchmaking_loop()
 	else:
 		# Original lobby list code for manual selection
 		for _lobby_id in lobbies:
@@ -423,6 +478,8 @@ func _on_lobby_match_list(lobbies: Array) -> void:
 			
 		# Enable the refresh button
 		lobbies_refresh_button.set_disabled(false)
+
+
 
 # When a lobby chat is updated
 func _on_lobby_chat_update(_lobby_id: int, changed_id: int, making_change_id: int, chat_state: int) -> void:
@@ -451,7 +508,12 @@ func _on_lobby_chat_update(_lobby_id: int, changed_id: int, making_change_id: in
 
 # Whan lobby metadata has changed
 func _on_lobby_data_update(_lobby_id: int, memberID: int, key: int) -> void:
-	print("[STEAM] Success, Lobby ID: "+str(_lobby_id)+", Member ID: "+str(memberID)+", Key: "+str(key)+"\n\n")
+	# Check if this is the game start signal
+	if Steam.getLobbyData(lobby_id, "game_starting") == "true" and not is_lobby_ready:
+		is_lobby_ready = true
+		output.append_text("[STEAM] Host is starting the game!\n")
+		await get_tree().create_timer(3.0).timeout
+		transition_to_game()
 
 # When getting a lobby invitation
 func _on_lobby_invite(inviter: int, _lobby_id: int, game_id: int) -> void:
@@ -530,8 +592,6 @@ func check_command_line():
 #################################################
 # Auto-matchmaking functions
 func start_party_matchmaking() -> void:
-	var current_members = Steam.getNumLobbyMembers(lobby_id)
-	
 	# Make sure we're in a lobby
 	if lobby_id == 0:
 		output.append_text("[STEAM] Must be in a lobby to start matchmaking\n")
@@ -541,18 +601,23 @@ func start_party_matchmaking() -> void:
 		output.append_text("[STEAM] Only the party leader can start matchmaking\n")
 		return
 	
+	# Reset matchmaking variables
+	matchmaking_phase = 0
 	is_matchmaking = true
 	matchmaking_timer = 0.0
 	matchmaking_start_time = Time.get_unix_time_from_system()
 	
-	# Update button text to show searching status
-	matchmaking_button.text = "Cancel Search\nSearching... (00:00)"
+	var current_players = Steam.getNumLobbyMembers(lobby_id)
+	# Update button text with initial player count
+	matchmaking_button.text = "Cancel Search (%d/%d)\nSearching: 00:00" % [current_players, REQUIRED_PLAYERS]
 	
-	# Set lobby as searching
+	# Mark our lobby as searching
 	Steam.setLobbyData(lobby_id, "status", "searching")
 	
-	output.append_text("[STEAM] Starting matchmaking with %d players...\n" % current_members)
-	search_for_match()
+	output.append_text("[STEAM] Starting matchmaking with %d players...\n" % current_players)
+	
+	# Start the matchmaking loop
+	matchmaking_loop()
 
 func search_for_match() -> void:
 	if not is_matchmaking:
@@ -598,6 +663,9 @@ func merge_parties(target_lobby: int) -> void:
 	# Join the target lobby
 	join_lobby(target_lobby)
 	
+	# Set status to starting since we know this will make a full lobby
+	Steam.setLobbyData(target_lobby, "game_starting", "true")
+	
 	# Notify all our previous party members to join
 	for member in our_members:
 		if member.steam_id != Global.steam_id:
@@ -618,7 +686,27 @@ func cancel_matchmaking() -> void:
 	
 	output.append_text("[STEAM] Matchmaking cancelled\n")
 
-
+func matchmaking_loop() -> void:
+	# If this matchmake_phase is 3 or less, keep going
+	if matchmaking_phase < 4 and is_matchmaking:
+		output.append_text("[STEAM] Searching in phase " + str(matchmaking_phase) + "...\n")
+		
+		# Set up filters
+		# Set the distance filter based on phase
+		Steam.addRequestLobbyListDistanceFilter(matchmaking_phase)
+		
+		# Filter by game mode
+		var mode_text = "classic" if game_mode_selector.get_selected_id() == GAME_MODE.CLASSIC else "ranked"
+		Steam.addRequestLobbyListStringFilter("mode", mode_text, Steam.LOBBY_COMPARISON_EQUAL)
+		
+		# Filter by status (only look for other searching lobbies)
+		Steam.addRequestLobbyListStringFilter("status", "searching", Steam.LOBBY_COMPARISON_EQUAL)
+		
+		# Request the lobby list
+		Steam.requestLobbyList()
+	else:
+		output.append_text("[STEAM] No matches found in any phase.\n")
+		cancel_matchmaking()
 
 # =====================================
 # ===== BUTTONS SIGNAL FUNCTIONS  =====

@@ -10,6 +10,7 @@ var is_online: bool = false
 var is_owned: bool = false
 var steam_id: int = 0
 var steam_username: String = "[not set]"
+var current_lobby_id: int = 0  # Add this variable
 
 var lobby_id : int = 0
 var lobby_members : Array = []
