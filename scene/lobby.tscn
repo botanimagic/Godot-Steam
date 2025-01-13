@@ -1,7 +1,8 @@
-[gd_scene load_steps=10 format=3 uid="uid://k30fjse2ok6l"]
+[gd_scene load_steps=13 format=3 uid="uid://k30fjse2ok6l"]
 
 [ext_resource type="Script" path="res://scene/lobby.gd" id="1_0m4ko"]
 [ext_resource type="PackedScene" uid="uid://1g246ii0mjyv" path="res://scene/steam_status.tscn" id="1_dr1un"]
+[ext_resource type="Script" path="res://scene/voice.gd" id="3_exsop"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_ajh6c"]
 bg_color = Color(0.0807833, 0.0807834, 0.0807833, 1)
@@ -35,6 +36,12 @@ bg_color = Color(0.227451, 0.227451, 0.227451, 1)
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_wibkk"]
 bg_color = Color(0.226707, 0.226708, 0.226707, 1)
+
+[sub_resource type="AudioStreamGenerator" id="AudioStreamGenerator_mf733"]
+buffer_length = 0.1
+
+[sub_resource type="AudioStreamWAV" id="AudioStreamWAV_ccwml"]
+format = 1
 
 [node name="Lobby" type="Panel"]
 anchors_preset = 15
@@ -203,6 +210,33 @@ layout_mode = 2
 theme_override_font_sizes/font_size = 20
 alignment = 1
 
+[node name="empty" type="Label" parent="Frame/SideBar/List"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+
+[node name="VoiceTitle" type="Label" parent="Frame/SideBar/List"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+text = "Voice Functions"
+
+[node name="PressToTalk" type="Button" parent="Frame/SideBar/List"]
+custom_minimum_size = Vector2(0, 50)
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+text = "Press to Talk"
+
+[node name="ToggleVoice" type="Button" parent="Frame/SideBar/List"]
+custom_minimum_size = Vector2(0, 50)
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+text = "Toggle Voice"
+
+[node name="Loopback" type="Button" parent="Frame/SideBar/List"]
+custom_minimum_size = Vector2(0, 50)
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+text = "Loopback"
+
 [node name="Lobbies" type="Panel" parent="."]
 visible = false
 layout_mode = 1
@@ -256,3 +290,12 @@ offset_right = 932.0
 offset_bottom = 697.5
 theme_override_styles/normal = SubResource("StyleBoxFlat_wibkk")
 text = "Refresh"
+
+[node name="Voice" type="Node" parent="."]
+script = ExtResource("3_exsop")
+
+[node name="Local" type="AudioStreamPlayer" parent="Voice"]
+stream = SubResource("AudioStreamGenerator_mf733")
+
+[node name="Network" type="AudioStreamPlayer" parent="Voice"]
+stream = SubResource("AudioStreamWAV_ccwml")

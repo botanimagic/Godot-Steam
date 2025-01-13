@@ -13,14 +13,21 @@ var user_avatar: Image
 @export var avatar_rect: TextureRect
 @export var button_kick: Button
 
-@onready var view_button: Button = $Member/Stuff/Controls/View
+@onready var view_button: Button = $Member/Member/Stuff/Controls/View
+
+@onready var mic_on: TextureRect = $Member/Notifications/MicON
+@onready var mic_off: TextureRect = $Member/Notifications/MicOFF
+@onready var loopback: TextureRect = $Member/Notifications/Loopback
 
 
 func _ready():
 	buttons_connections()
 
 	Helper.connect_signal(Steam.avatar_loaded, on_avatar_loaded)
-
+	
+	for notification in $Member/Notifications.get_children():
+		if notification.name != "MicOFF":
+			notification.hide()
 
 # Set this player up
 func set_member(_steam_id: int, _steam_name: String) -> void:

@@ -1,7 +1,7 @@
 extends Panel
 
 enum GAME_MODE { CLASSIC, RANKED }
-enum LOBBY_AVAILABILITY { PRIVATE, FRIENDS, PUBLIC, INVISIBLE }
+
 
 @onready var lobby_member_scene = preload("res://scene/lobby_member.tscn")
 @onready var button_theme = preload("res://button_theme.tres")
@@ -10,6 +10,8 @@ enum LOBBY_AVAILABILITY { PRIVATE, FRIENDS, PUBLIC, INVISIBLE }
 @onready var output: RichTextLabel = $Frame/Main/Displays/Outputs/Output
 @onready var label_lobby_id: Label = $Frame/Main/Displays/Outputs/Titles/LobbyID
 @onready var side_bar_list: VBoxContainer = $Frame/SideBar/List
+@onready var voice: Node = $Voice
+
 
 
 @onready var create_lobby_button: Button = $Frame/SideBar/List/CreateLobby
@@ -38,7 +40,7 @@ var lobby_members: Array = []
 var lobby_max_members: int = 10
 const MIN_PLAYERS_TO_START: int = 4  # Minimum players needed to start a game
 const MIN_PLAYERS_TO_MATCHMAKE: int = 1  # Minimum players needed to start matchmaking
-const REQUIRED_PLAYERS: int = 2  # Number of players needed to start
+const REQUIRED_PLAYERS: int = 4  # Number of players needed to start
 var is_lobby_ready: bool = false
 
 # Matchmaking System
@@ -47,8 +49,6 @@ var matchmaking_timer: float = 0.0
 const MATCHMAKING_TIMEOUT: float = 180.0  # 3 minutes timeout
 var matchmaking_start_time: float = 0.0
 var matchmaking_phase: int = 0  # Add this with your other variables
-
-
 
 
 
@@ -151,6 +151,8 @@ func create_lobby_for_player() -> void:
 		# Set game mode immediately after creation
 		var mode_text = "classic" if game_mode_selector.get_selected_id() == GAME_MODE.CLASSIC else "ranked"
 		Steam.setLobbyData(lobby_id, "mode", mode_text)
+		
+
 
 
 # When the player is joining a lobby
@@ -211,6 +213,15 @@ func get_lobby_members() -> void:
 		var MEMBER_STEAM_ID: int = Steam.getLobbyMemberByIndex(lobby_id, MEMBER)
 		var MEMBER_STEAM_NAME: String = Steam.getFriendPersonaName(MEMBER_STEAM_ID)
 		add_player_to_connect_list(MEMBER_STEAM_ID, MEMBER_STEAM_NAME)
+	
+	print("\nPlayer lists")
+	print("players list vbox : ", player_list_vbox.get_children())
+	# Set player list node to voice.players_lists
+	#for player in player_list_vbox.get_children():
+		#print("player : ", player)
+		#if player is Control:
+			#voice.players_lists.append(player)
+	#print("player lists : ", voice.players_lists)
 	
 	# Update matchmaking button state for lobby owner
 	if Global.steam_id == Steam.getLobbyOwner(lobby_id):
