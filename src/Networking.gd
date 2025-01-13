@@ -18,10 +18,10 @@ func send_message(message_contents, target_id: int = 0) -> void:
 	if target_id == 0:
 		# Broadcast to all connected users
 		for user in connected_users:
-			Steam.sendP2PPacket(user, message_contents, Steam.P2P_SEND_RELIABLE, voice_channel)
+			Steam.sendP2PPacket(user, message_contents, Steam.P2P_SEND_UNRELIABLE, voice_channel)
 	else:
 		# Send to specific user
-		Steam.sendP2PPacket(target_id, message_contents, Steam.P2P_SEND_RELIABLE, voice_channel)
+		Steam.sendP2PPacket(target_id, message_contents, Steam.P2P_SEND_UNRELIABLE, voice_channel)
 
 func add_connection(steam_id: int) -> void:
 	if not steam_id in connected_users:

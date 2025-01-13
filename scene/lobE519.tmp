@@ -38,11 +38,9 @@ bg_color = Color(0.227451, 0.227451, 0.227451, 1)
 bg_color = Color(0.226707, 0.226708, 0.226707, 1)
 
 [sub_resource type="AudioStreamGenerator" id="AudioStreamGenerator_mf733"]
-mix_rate = 48000.0
 buffer_length = 0.1
 
 [sub_resource type="AudioStreamGenerator" id="AudioStreamGenerator_network"]
-mix_rate = 48000.0
 buffer_length = 0.1
 
 [node name="Lobby" type="Panel"]

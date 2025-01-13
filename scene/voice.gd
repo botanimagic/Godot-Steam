@@ -37,6 +37,10 @@ func _ready() -> void:
 	network.play()
 	network_playback = network.get_stream_playback()
 
+	await get_tree().create_timer(2.0).timeout  # Wait for everything to initialize
+	debug_voice_setup()
+	update_button_states()
+
 
 func _process(_delta: float) -> void:
 	# Essentially checking for the local voice data then sending it to the networking
@@ -48,45 +52,103 @@ func _process(_delta: float) -> void:
 #################################################
 # VOICE FUNCTIONS
 #################################################
+func update_button_states() -> void:
+	toggle_voice_button.button_pressed = is_voice_toggled
+	loopback_button.button_pressed = loopback_enabled
+
+
+func debug_voice_setup() -> void:
+	print("\n=== Voice Chat Debug ===")
+	var mic_test = Steam.getAvailableVoice()
+	if mic_test['result'] != Steam.VOICE_RESULT_OK:
+		print("[ERROR] Microphone not available or not properly initialized")
+		match mic_test['result']:
+			1: print("OK")
+			2: print("Not initialized")
+			3: print("No data available")
+			4: print("Buffer too small")
+			_: print("Unknown error")
+	else:
+		print("[OK] Microphone initialized successfully")
 
 #
 func change_voice_status() -> void:
-	var players_lists = players_vbox.get_children()
-	print("players lists : ", players_lists)
-	
-	for player in players_lists :
-		if player.steam_id == Global.steam_id :
-			player.mic_on.set_visible(is_voice_toggled)
-			player.mic_off.set_visible(!is_voice_toggled)
-	
-	# Let Steam know that the user is currently using voice chat in game. 
-	# This will suppress the microphone for all voice communication in the Steam UI.
-	Steam.setInGameVoiceSpeaking(Global.steam_id, is_voice_toggled)
-
 	if is_voice_toggled:
+		# Try to initialize voice recording
 		Steam.startVoiceRecording()
+		var test = Steam.getAvailableVoice()
+		if test['result'] != Steam.VOICE_RESULT_OK:
+			print("[ERROR] Failed to start voice recording")
+			is_voice_toggled = false
+			return
 	else:
 		Steam.stopVoiceRecording()
+	
+	# Update UI
+	var players_lists = players_vbox.get_children()
+	for player in players_lists:
+		if player.steam_id == Global.steam_id:
+			player.mic_on.visible = is_voice_toggled
+			player.mic_off.visible = !is_voice_toggled
+	
+	# Update Steam
+	Steam.setInGameVoiceSpeaking(Global.steam_id, is_voice_toggled)
 
 #
 func check_for_voice() -> void:
 	var available_voice: Dictionary = Steam.getAvailableVoice()
+	
 	if available_voice['result'] == Steam.VOICE_RESULT_OK and available_voice['buffer'] > 0:
-		print("Voice message found")
 		var voice_data: Dictionary = Steam.getVoice()
-		if voice_data['result'] == Steam.VOICE_RESULT_OK and voice_data['written']:
-			print("Voice message has data: "+str(voice_data['result'])+" / "+str(voice_data['written']))
+		
+		if voice_data['result'] == Steam.VOICE_RESULT_OK and voice_data['written'] > 0:
+			# Check if we're getting actual voice data (not just static)
+			var is_valid_audio = false
+			var buffer = voice_data['buffer']
+			for i in range(min(10, buffer.size())):
+				if buffer[i] != buffer[0]:
+					is_valid_audio = true
+					break
 			
-			# Send to all connected users
-			var players_lists = players_vbox.get_children()
-			for player in players_lists:
-				if player.steam_id != Global.steam_id:
-					Networking.send_message(voice_data['buffer'], player.steam_id)
+			if is_valid_audio:
+				print("[VOICE] Valid voice data detected")
+				if loopback_enabled:
+					process_audio_data(local_playback, voice_data['buffer'])
+				
+				# Send to other players
+				for user_id in Networking.connected_users:
+					print("[VOICE] Sending voice to user: ", user_id)
+					Networking.send_message(voice_data['buffer'], user_id)
+			else:
+				print("[VOICE] Skipping static/noise data")
+
+func process_audio_data(playback: AudioStreamGeneratorPlayback, buffer: PackedByteArray) -> void:
+	if playback.get_frames_available() <= 0:
+		return
+		
+	print("[VOICE DEBUG] Processing audio data of size: ", buffer.size())
+	
+	for i in range(0, mini(playback.get_frames_available() * 2, buffer.size()), 2):
+		if i + 1 >= buffer.size():
+			break
 			
-			# If loopback is enable, play it back at this point
-			if loopback_enabled:
-				print("Loopback on")
-				process_voice_data(voice_data, "local")
+		# Convert the bytes to audio samples
+		var sample: float = float(buffer[i] | (buffer[i + 1] << 8)) / 32768.0
+		playback.push_frame(Vector2(sample, sample))
+
+#func play_network_voice(voice_data: Dictionary) -> void:
+	#if voice_data['written'] <= 0 or not voice_data['buffer']:
+		#return
+		#
+	#var decompressed_voice: Dictionary = Steam.decompressVoice(
+		#voice_data['buffer'],
+		#voice_data['written'],
+		#current_sample_rate
+	#)
+	#
+	#if decompressed_voice['result'] == Steam.VOICE_RESULT_OK:
+		#network_voice_buffer = decompressed_voice['uncompressed']
+		#process_audio_data(network_playback, network_voice_buffer)
 
 #
 func get_sample_rate() -> void:
@@ -101,8 +163,11 @@ func get_sample_rate() -> void:
 
 # A network voice packet exists, process it
 func play_network_voice(voice_data: Dictionary) -> void:
+	print("[VOICE DEBUG] Received network voice data: ", voice_data)  # Debug output
+	
 	# Skip if the voice data is empty or invalid
 	if voice_data['written'] <= 0 or not voice_data['buffer']:
+		print("[VOICE DEBUG] Invalid voice data received")
 		return
 		
 	# Process the network voice data
@@ -111,6 +176,8 @@ func play_network_voice(voice_data: Dictionary) -> void:
 		voice_data['written'],
 		current_sample_rate
 	)
+	
+	print("[VOICE DEBUG] Decompressed voice data: ", decompressed_voice)  # Debug output
 	
 	if decompressed_voice['result'] != Steam.VOICE_RESULT_OK or decompressed_voice['size'] == 0:
 		return
@@ -131,39 +198,6 @@ func play_network_voice(voice_data: Dictionary) -> void:
 		# Convert the 16-bit integer to a float from -1 to 1
 		var amplitude: float = float(raw_value - 32768) / 32768.0
 		network_playback.push_frame(Vector2(amplitude, amplitude))
-
-#
-func process_voice_data(voice_data: Dictionary, voice_source: String) -> void:
-	get_sample_rate()
-	
-	var decompressed_voice: Dictionary = Steam.decompressVoice(
-			voice_data['buffer'], 
-			voice_data['written'], 
-			current_sample_rate)
-			
-	if (
-			not decompressed_voice['result'] == Steam.VOICE_RESULT_OK
-			or decompressed_voice['size'] == 0
-			or not voice_source == "local"
-	):
-		return
-	
-	if local_playback.get_frames_available() <= 0:
-		return
-	
-	local_voice_buffer = decompressed_voice['uncompressed']
-	local_voice_buffer.resize(decompressed_voice['size'])
-	
-	for i: int in range(0, mini(local_playback.get_frames_available() * 2, local_voice_buffer.size()), 2):
-		# Combine the low and high bits to get full 16-bit value
-		var raw_value: int = local_voice_buffer[0] | (local_voice_buffer[1] << 8)
-		# Make it a 16-bit signed integer
-		raw_value = (raw_value + 32768) & 0xffff
-		# Convert the 16-bit integer to a float on from -1 to 1
-		var amplitude: float = float(raw_value - 32768) / 32768.0
-		local_playback.push_frame(Vector2(amplitude, amplitude))
-		local_voice_buffer.remove_at(0)
-		local_voice_buffer.remove_at(0)
 
 #################################################
 # BUTTON HANDLING

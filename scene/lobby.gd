@@ -416,13 +416,33 @@ func _on_lobby_joined(_lobby_id: int, _permissions: int, _locked: bool, response
 		
 		game_mode_selector.set_disabled(true)
 		
-		# Set up P2P networking for voice chat - remove invalid function call
+		# Set up P2P networking for voice chat
 		Steam.allowP2PPacketRelay(true)
 		
-		# Accept P2P sessions from lobby members
-		for member in lobby_members:
-			if member["steam_id"] != Global.steam_id:
-				Steam.acceptP2PSessionWithUser(member["steam_id"])
+		# Initialize P2P for all existing members
+		var members = Steam.getNumLobbyMembers(lobby_id)
+		print("[DEBUG] Initializing P2P for " + str(members) + " members")
+		for i in range(members):
+			var member_id = Steam.getLobbyMemberByIndex(lobby_id, i)
+			if member_id != Global.steam_id:
+				print("[DEBUG] Accepting P2P with user: " + str(member_id))
+				Steam.acceptP2PSessionWithUser(member_id)
+				Networking.add_connection(member_id)
+
+		# Clear any existing P2P connections
+		for user in Networking.connected_users:
+			Networking.remove_connection(user)
+			
+		# Set up fresh P2P connections
+		#var members = Steam.getNumLobbyMembers(_lobby_id)
+		#print("[DEBUG] Setting up P2P for " + str(members) + " members")
+		
+		#for i in range(members):
+			#var member_id = Steam.getLobbyMemberByIndex(_lobby_id, i)
+			#if member_id != Global.steam_id:
+				#print("[DEBUG] Setting up P2P with: " + str(member_id))
+				#Steam.acceptP2PSessionWithUser(member_id)
+				#Networking.add_connection(member_id)
 		
 		# Check if this join makes a full lobby
 		var current_members = Steam.getNumLobbyMembers(lobby_id)
@@ -536,15 +556,19 @@ func _on_lobby_chat_update(_lobby_id: int, changed_id: int, making_change_id: in
 	# If a player has joined the lobby
 	if chat_state == 1:
 		output.append_text("[STEAM] "+str(CHANGER)+" has joined the lobby.\n")
+		Networking.add_connection(changed_id)
 	# Else if a player has left the lobby
 	elif chat_state == 2:
 		output.append_text("[STEAM] "+str(CHANGER)+" has left the lobby.\n")
+		Networking.remove_connection(changed_id)
 	# Else if a player has been kicked
 	elif chat_state == 8:
 		output.append_text("[STEAM] "+str(CHANGER)+" has been kicked from the lobby.\n")
+		Networking.remove_connection(changed_id)
 	# Else if a player has been banned
 	elif chat_state == 16:
 		output.append_text("[STEAM] "+str(CHANGER)+" has been banned from the lobby.\n")
+		Networking.remove_connection(changed_id)
 	# Else there was some unknown change
 	else:
 		output.append_text("[STEAM] "+str(CHANGER)+" did... something.\n")
