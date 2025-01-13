@@ -27,9 +27,15 @@ func _ready() -> void:
 	# Buttons Connections
 	buttons_signal_connections()
 	
+	# Initialize local voice playback
 	local.stream.mix_rate = current_sample_rate
 	local.play()
 	local_playback = local.get_stream_playback()
+	
+	# Initialize network voice playback
+	network.stream.mix_rate = current_sample_rate
+	network.play()
+	network_playback = network.get_stream_playback()
 
 
 func _process(_delta: float) -> void:
@@ -67,13 +73,16 @@ func check_for_voice() -> void:
 	var available_voice: Dictionary = Steam.getAvailableVoice()
 	if available_voice['result'] == Steam.VOICE_RESULT_OK and available_voice['buffer'] > 0:
 		print("Voice message found")
-		# Valve's getVoice uses 1024 but GodotSteam's is set at 8192?
-		# Our sizes might be way off; internal GodotSteam notes that Valve suggests 8kb
-		# However, this is not mentioned in the header nor the SpaceWar example but -is- in Valve's docs which are usually wrong
 		var voice_data: Dictionary = Steam.getVoice()
 		if voice_data['result'] == Steam.VOICE_RESULT_OK and voice_data['written']:
 			print("Voice message has data: "+str(voice_data['result'])+" / "+str(voice_data['written']))
-			Networking.send_message(voice_data['buffer'])
+			
+			# Send to all connected users
+			var players_lists = players_vbox.get_children()
+			for player in players_lists:
+				if player.steam_id != Global.steam_id:
+					Networking.send_message(voice_data['buffer'], player.steam_id)
+			
 			# If loopback is enable, play it back at this point
 			if loopback_enabled:
 				print("Loopback on")
@@ -92,7 +101,36 @@ func get_sample_rate() -> void:
 
 # A network voice packet exists, process it
 func play_network_voice(voice_data: Dictionary) -> void:
-	process_voice_data(voice_data, "remote")
+	# Skip if the voice data is empty or invalid
+	if voice_data['written'] <= 0 or not voice_data['buffer']:
+		return
+		
+	# Process the network voice data
+	var decompressed_voice: Dictionary = Steam.decompressVoice(
+		voice_data['buffer'],
+		voice_data['written'],
+		current_sample_rate
+	)
+	
+	if decompressed_voice['result'] != Steam.VOICE_RESULT_OK or decompressed_voice['size'] == 0:
+		return
+	
+	if network_playback.get_frames_available() <= 0:
+		return
+	
+	# Prepare the voice buffer
+	network_voice_buffer = decompressed_voice['uncompressed']
+	network_voice_buffer.resize(decompressed_voice['size'])
+	
+	# Process and play the audio frames
+	for i in range(0, mini(network_playback.get_frames_available() * 2, network_voice_buffer.size()), 2):
+		# Combine the low and high bits to get full 16-bit value
+		var raw_value: int = network_voice_buffer[i] | (network_voice_buffer[i + 1] << 8)
+		# Make it a 16-bit signed integer
+		raw_value = (raw_value + 32768) & 0xffff
+		# Convert the 16-bit integer to a float from -1 to 1
+		var amplitude: float = float(raw_value - 32768) / 32768.0
+		network_playback.push_frame(Vector2(amplitude, amplitude))
 
 #
 func process_voice_data(voice_data: Dictionary, voice_source: String) -> void:

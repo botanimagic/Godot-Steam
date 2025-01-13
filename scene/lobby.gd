@@ -96,6 +96,30 @@ func _process(delta: float) -> void:
 		if matchmaking_timer >= MATCHMAKING_TIMEOUT:
 			cancel_matchmaking()
 			output.append_text("[STEAM] Matchmaking timed out after %d minutes\n" % [MATCHMAKING_TIMEOUT / 60])
+	
+	# Check for incoming voice packets
+	check_voice_packets()
+
+# Add this new function to handle voice packets
+func check_voice_packets() -> void:
+	# Get the number of available packets
+	var available_packets = Steam.getAvailableP2PPacketSize(0)
+	
+	# Process up to packet_read_limit packets per frame
+	var packets_read = 0
+	while available_packets > 0 and packets_read < voice.packet_read_limit:
+		var packet_data = Steam.readP2PPacket(available_packets, 0)
+		
+		if packet_data["data"].size() > 0:
+			# Send voice data to voice node for playback
+			var voice_data = {
+				"buffer": packet_data["data"],
+				"written": packet_data["data"].size()
+			}
+			voice.play_network_voice(voice_data)
+		
+		packets_read += 1
+		available_packets = Steam.getAvailableP2PPacketSize(0)
 
 # Send the message by pressing enter
 func _input(ev: InputEvent) -> void:
@@ -151,6 +175,9 @@ func create_lobby_for_player() -> void:
 		# Set game mode immediately after creation
 		var mode_text = "classic" if game_mode_selector.get_selected_id() == GAME_MODE.CLASSIC else "ranked"
 		Steam.setLobbyData(lobby_id, "mode", mode_text)
+
+		 # Set voice chat permissions - remove invalid function call
+		Steam.allowP2PPacketRelay(true)
 		
 
 
@@ -388,6 +415,14 @@ func _on_lobby_joined(_lobby_id: int, _permissions: int, _locked: bool, response
 			matchmaking_button.set_disabled(true)
 		
 		game_mode_selector.set_disabled(true)
+		
+		# Set up P2P networking for voice chat - remove invalid function call
+		Steam.allowP2PPacketRelay(true)
+		
+		# Accept P2P sessions from lobby members
+		for member in lobby_members:
+			if member["steam_id"] != Global.steam_id:
+				Steam.acceptP2PSessionWithUser(member["steam_id"])
 		
 		# Check if this join makes a full lobby
 		var current_members = Steam.getNumLobbyMembers(lobby_id)

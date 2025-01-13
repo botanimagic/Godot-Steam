@@ -40,8 +40,8 @@ bg_color = Color(0.226707, 0.226708, 0.226707, 1)
 [sub_resource type="AudioStreamGenerator" id="AudioStreamGenerator_mf733"]
 buffer_length = 0.1
 
-[sub_resource type="AudioStreamWAV" id="AudioStreamWAV_ccwml"]
-format = 1
+[sub_resource type="AudioStreamGenerator" id="AudioStreamGenerator_network"]
+buffer_length = 0.1
 
 [node name="Lobby" type="Panel"]
 anchors_preset = 15
@@ -298,4 +298,4 @@ script = ExtResource("3_exsop")
 stream = SubResource("AudioStreamGenerator_mf733")
 
 [node name="Network" type="AudioStreamPlayer" parent="Voice"]
-stream = SubResource("AudioStreamWAV_ccwml")
+stream = SubResource("AudioStreamGenerator_network")
