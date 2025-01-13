@@ -72,6 +72,16 @@ func _ready() -> void:
 	game_mode_selector.add_item("Ranked", GAME_MODE.RANKED)
 	game_mode_selector.select(0)  # Default to Classic
 	
+	# Check Steam initialization
+	if not Steam.isSteamRunning():
+		print("[ERROR] Steam must be running before using voice chat")
+		# Disable voice features
+		$Voice.toggle_voice_button.disabled = true
+		$Voice.press_to_talk_button.disabled = true
+		$Voice.loopback_button.disabled = true
+		return
+
+	
 	
 	# Check for command line arguments
 	check_command_line()
