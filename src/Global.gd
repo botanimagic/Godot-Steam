@@ -13,6 +13,7 @@ var steam_username: String = "[not set]"
 
 var lobby_id : int = 0
 var lobby_members : Array = []
+var current_players_data: Array = []
 
 func _ready() -> void:
 	print("Starting the GodotSteam example project...")

@@ -5,7 +5,7 @@ enum LOBBY_AVAILABILITY { PRIVATE, FRIENDS, PUBLIC, INVISIBLE }
 
 @onready var lobby_member_scene = preload("res://scene/lobby_member.tscn")
 @onready var button_theme = preload("res://button_theme.tres")
-
+@onready var game_play_scene = preload("res://scene/game_play.tscn")
 
 @onready var output: RichTextLabel = $Frame/Main/Displays/Outputs/Output
 @onready var label_lobby_id: Label = $Frame/Main/Displays/Outputs/Titles/LobbyID
@@ -18,6 +18,8 @@ enum LOBBY_AVAILABILITY { PRIVATE, FRIENDS, PUBLIC, INVISIBLE }
 @onready var leave_button: Button = $Frame/SideBar/List/Leave
 @onready var send_button: Button = $Frame/Main/Messaging/Send
 @onready var matchmaking_button: Button = $Frame/SideBar/List/Matchmaking
+@onready var start_game_button: Button = $Frame/SideBar/List/StartGame
+
 @onready var game_mode_selector: OptionButton = $Frame/SideBar/List/GameModeSelector
 
 @onready var chat_input: LineEdit = $Frame/Main/Messaging/Chat
@@ -46,9 +48,12 @@ var matchmaking_start_time: float = 0.0
 var matchmaking_progress: ProgressBar
 var rng = RandomNumberGenerator.new()
 
+var required_players: int = 4  # Set the required number of players
+
 func _ready() -> void:
 	# Buttons Connections
 	buttons_signal_connections()
+	check_start_game_conditions()
 	
 	Helper.connect_signal(Steam.lobby_created, _on_lobby_created)
 	Helper.connect_signal(Steam.lobby_match_list, _on_lobby_match_list)
@@ -132,12 +137,15 @@ func _on_kick_player_in_lobby(kick_id: int) -> void:
 func create_lobby_for_player() -> void:
 	# Make sure a lobby is not already set
 	if lobby_id == 0:
-		# Set the lobby to public with ten members max
-		Steam.createLobby(Steam.LOBBY_TYPE_PUBLIC, lobby_max_members)
+		# Set the lobby to public with exactly four members max
+		Steam.createLobby(Steam.LOBBY_TYPE_PUBLIC, required_players)
 		
 		# Set game mode immediately after creation
 		var mode_text = "classic" if game_mode_selector.get_selected_id() == GAME_MODE.CLASSIC else "ranked"
 		Steam.setLobbyData(lobby_id, "mode", mode_text)
+		
+		# Disable create lobby button
+		create_lobby_button.set_disabled(true)
 
 
 # When the player is joining a lobby
@@ -183,6 +191,8 @@ func leave_lobby() -> void:
 		
 		# Enable the create lobby button
 		create_lobby_button.set_disabled(false)
+		# Disable the start game button
+		start_game_button.set_disabled(true)
 		# Disable the leave lobby button and all test buttons
 		change_button_states(true)
 
@@ -199,6 +209,10 @@ func get_lobby_members() -> void:
 	var MEMBERS: int = Steam.getNumLobbyMembers(lobby_id)
 	# Update the player list title
 	player_list_title.set_text("Player List ("+str(MEMBERS)+")")
+	
+	# Check if we can start the game
+	check_start_game_conditions()
+	
 	# Get the data of these players from Steam
 	for MEMBER in range(0, MEMBERS):
 		print(MEMBER)
@@ -275,6 +289,12 @@ func process_lobby_message(_result: int, user: int, message: String, type: int):
 				# If this is your ID, leave the lobby
 				if Global.steam_id == int(COMMANDS[1]):
 					leave_lobby()
+			elif message.begins_with("/start_game"):
+				output.append_text("[STEAM] Host has started the game!\n")
+				 # Store current players data in Global
+				Global.current_players_data = lobby_members.duplicate()
+				# Change scene to gameplay
+				get_tree().change_scene_to_packed(game_play_scene)
 		# Else this is just chat message
 		else:
 			# Print the output before showing the message
@@ -657,6 +677,30 @@ func show_continue_dialog() -> bool:
 	
 	return response
 
+# Check if we can start the game
+func check_start_game_conditions() -> void:
+	var can_start = false
+	
+	if lobby_id != 0:  # If we're in a lobby
+		# Only the host can start the game
+		if Steam.getLobbyOwner(lobby_id) == Global.steam_id:
+			# Check if we have exactly the required number of players
+			if Steam.getNumLobbyMembers(lobby_id) == required_players:
+				can_start = true
+	
+	start_game_button.set_disabled(!can_start)
+
+# Start the game
+func start_game() -> void:
+	if lobby_id != 0 and Steam.getNumLobbyMembers(lobby_id) == required_players:
+		# Notify all players that the game is starting
+		Steam.sendLobbyChatMsg(lobby_id, "/start_game")
+		output.append_text("[STEAM] Starting the game...\n")
+		 # Store current players data in Global
+		Global.current_players_data = lobby_members.duplicate()
+		# Change scene to gameplay
+		get_tree().change_scene_to_packed(game_play_scene)
+
 # =====================================
 # ===== BUTTONS SIGNAL FUNCTIONS  =====
 # =====================================
@@ -671,6 +715,7 @@ func buttons_signal_connections():
 	send_button.connect("pressed", _on_send_message_pressed)
 	close_lobbies_button.connect("pressed", _on_close_lobbies_pressed)
 	lobbies_refresh_button.connect("pressed", _on_refresh_lobbies_pressed)
+	start_game_button.connect("pressed", _on_start_game_pressed)
 
 #
 func _on_create_lobby_pressed():
@@ -717,3 +762,8 @@ func _on_close_lobbies_pressed():
 func _on_refresh_lobbies_pressed():
 	print("refresh lobbies pressed")
 	_refresh_lobbies()
+
+#
+func _on_start_game_pressed():
+	print("start game pressed")
+	start_game()
